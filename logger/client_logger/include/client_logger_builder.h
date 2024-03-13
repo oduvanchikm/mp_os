@@ -1,17 +1,15 @@
 #ifndef MATH_PRACTICE_AND_OPERATING_SYSTEMS_CLIENT_LOGGER_BUILDER_H
 #define MATH_PRACTICE_AND_OPERATING_SYSTEMS_CLIENT_LOGGER_BUILDER_H
 
-//#include <logger_builder.h>
-#include "../../logger/include/logger_builder.h"
+#include <logger_builder.h>
 #include "client_logger.h"
-
 
 class client_logger_builder final : public logger_builder
 {
 
 private:
 
-    std::map<std::string, std::vector<logger::severity>> data;
+    std::map<std::string, std::set<logger::severity>> _builder_streams;
 
 public:
 
