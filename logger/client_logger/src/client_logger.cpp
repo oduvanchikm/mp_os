@@ -1,42 +1,43 @@
 //#include <not_implemented.h>
 #include "../include/client_logger.h"
 
-std::map<std::string, std::pair<std::ofstream*, size_t>> client_logger::_streams_ =
+std::map<std::string, std::pair<std::ofstream*, size_t>> client_logger::_global_streams =
         std::map<std::string, std::pair<std::ofstream*, size_t>>();
 
-client_logger::client_logger(std::map<std::string, std::vector<severity>> const &other)
+client_logger::client_logger(std::map<std::string, std::set<severity>> const &builder)
 {
-    for (auto item : other) // проходимся по парам файл-северити
+    for (auto &builder_stream : builder)
     {
-        auto global_stream = _streams_.find(item.first); // поиск
+        auto global_stream = _global_streams.find(builder_stream.first);
 
-        std::ofstream *stream = nullptr; // создаем поток для записи файла
+        std::ofstream* stream = nullptr;
 
-        if (global_stream == _streams_.end()) // если нет файла
+        if (global_stream == _global_streams.end())
         {
-            if (!item.first.empty())
+            if (global_stream->first != "console")
             {
-                stream = new std::ofstream; // создание новго потока вывода
-                stream->open(item.first); // открытие его
+                stream = new std::ofstream;
+                stream->open(builder_stream.first);
             }
 
-            _streams_.insert(std::make_pair(item.first, std::make_pair(stream, 1)));
+            _global_streams.insert(std::make_pair(builder_stream.first, std::make_pair(stream, 1)));
         }
         else
         {
-            stream = global_stream->second.first; // указатель на объект файла
-            global_stream->second.second++; //  увеличение количества использований потока вывода
+            stream = global_stream->second.first;
+            global_stream->second.second++;
         }
 
-        _streams_.insert(std::make_pair(item.first, std::make_pair(stream, 1)));
+        _streams.insert(std::make_pair(builder_stream.first, std::make_pair(stream, builder_stream.second)));
     }
 }
 
 client_logger::~client_logger() noexcept
 {
-    for (auto &logger : _streams_loggers_)
+    for (auto &stream : _streams)
     {
-        auto& global_logger = _streams_[logger.first];
+        auto global_logger = _global_streams[stream.first];
+
         global_logger.second--;
 
         if(!global_logger.second)
@@ -49,29 +50,30 @@ client_logger::~client_logger() noexcept
                 }
                 delete global_logger.first;
             }
-            _streams_.erase(logger.first);
+            _global_streams.erase(stream.first);
         }
     }
 }
 
+
 logger const *client_logger::log(const std::string &text, logger::severity severity) const noexcept
 {
-    std::string data_and_time_string = current_datetime_to_string();
-    std::string severity_string = severity_to_string(severity);
+    auto string_severity = severity_to_string(severity);
+    auto string_time = current_datetime_to_string();
 
-    for (auto &logger : _streams_loggers_)
+    for (auto &stream : _streams)
     {
-        if (logger.second.first == nullptr) // если файл закрыт
+        if (stream.second.second.find(severity) != stream.second.second.end())
         {
-            // то в консольку
-            std::cout << "[" << data_and_time_string << "][" << severity_string << "]" << text << std::endl;
-        }
-        else
-        {
-            // то в файлик
-            *(logger.second.first) << "[" << data_and_time_string << "][" << severity_string << "]" << text << std::endl;
+            if (stream.second.first == nullptr)
+            {
+                std::cout << "[" << string_time << "][" << string_severity << "]" << text << std::endl;
+            }
+            else
+            {
+                *(stream.second.first) << "[" << string_time << "][" << string_severity << "]" << text << std::endl;
+            }
         }
     }
-
     return this;
 }
