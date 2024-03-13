@@ -14,14 +14,28 @@ client_logger_builder::~client_logger_builder() noexcept
 
 logger_builder *client_logger_builder::add_file_stream(std::string const &stream_file_path, logger::severity severity)
 {
-    data[stream_file_path].push_back(severity);
+    if (_builder_streams.find(stream_file_path) != _builder_streams.end())
+    {
+        _builder_streams[stream_file_path].insert(severity);
+    }
+    else
+    {
+        _builder_streams.insert({stream_file_path, {severity}});
+    }
 
     return this;
 }
 
 logger_builder *client_logger_builder::add_console_stream(logger::severity severity)
 {
-    data["console"].push_back(severity);
+    if (_builder_streams.find("console") != _builder_streams.end())
+    {
+        _builder_streams["console"].insert(severity);
+    }
+    else
+    {
+        _builder_streams.insert({"console", {severity}});
+    }
 
     return this;
 }
@@ -34,12 +48,12 @@ logger_builder* client_logger_builder::transform_with_configuration(std::string 
 
 logger_builder *client_logger_builder::clear()
 {
-//    data.clear();
-//
-//    return this;
+    _builder_streams.clear();
+
+    return this;
 }
 
 logger *client_logger_builder::build() const
 {
-    return new client_logger(data);
+    return new client_logger(_builder_streams);
 }
