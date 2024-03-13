@@ -55,7 +55,6 @@ client_logger::~client_logger() noexcept
     }
 }
 
-
 logger const *client_logger::log(const std::string &text, logger::severity severity) const noexcept
 {
     auto string_severity = severity_to_string(severity);

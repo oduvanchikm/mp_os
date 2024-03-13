@@ -2,6 +2,7 @@
 #define MATH_PRACTICE_AND_OPERATING_SYSTEMS_CLIENT_LOGGER_H
 
 #include <logger.h>
+//#include "../src/json.hpp"
 #include <map>
 #include <set>
 #include <iostream>
@@ -18,7 +19,6 @@ private:
 private:
 
     static std::map<std::string, std::pair<std::ofstream*, size_t>> _global_streams;
-
 
 public:
 

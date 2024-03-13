@@ -40,10 +40,30 @@ logger_builder *client_logger_builder::add_console_stream(logger::severity sever
     return this;
 }
 
-logger_builder* client_logger_builder::transform_with_configuration(std::string const &configuration_file_path,
-                                                                    std::string const &configuration_path)
+logger_builder* client_logger_builder::transform_with_configuration(
+        std::string const &configuration_file_path,
+        std::string const &configuration_path)
 {
-    //throw not_implemented("logger_builder* client_logger_builder::transform_with_configuration(std::string const &configuration_file_path, std::string const &configuration_path)", "your code should be here...");
+//    std::cout << configuration_file_path << std::endl;
+
+    std::ifstream file(configuration_file_path);
+
+//    std::cout << configuration_file_path << std::endl;
+
+    auto info = nlohmann::json::parse(file);
+
+//    std::cout << configuration_file_path << std::endl;
+
+    auto pairs = info[configuration_path];
+
+//    std::cout << pairs << std::endl;
+
+    for(auto& elem : pairs)
+    {
+        _builder_streams[elem.value("file", "Not found!")].insert({elem["severity"]});
+    }
+
+    return this;
 }
 
 logger_builder *client_logger_builder::clear()

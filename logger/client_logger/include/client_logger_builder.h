@@ -3,6 +3,8 @@
 
 #include <logger_builder.h>
 #include "client_logger.h"
+#include <map>
+#include <nlohmann/json.hpp>
 
 class client_logger_builder final : public logger_builder
 {
