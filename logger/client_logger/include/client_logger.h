@@ -1,26 +1,28 @@
 #ifndef MATH_PRACTICE_AND_OPERATING_SYSTEMS_CLIENT_LOGGER_H
 #define MATH_PRACTICE_AND_OPERATING_SYSTEMS_CLIENT_LOGGER_H
 
-//#include <logger.h>
-#include "../../logger/include/logger.h"
-#include "client_logger_builder.h"
+#include <logger.h>
+#include <map>
+#include <set>
+#include <iostream>
+#include <fstream>
+
 
 class client_logger final : public logger
 {
 
-    friend class client_logger_builder;
+private:
+
+    std::map<std::string, std::pair<std::ofstream*, std::set<logger::severity>>> _streams;
 
 private:
 
-    std::map<std::string, std::pair<std::ofstream*, logger::severity>> _streams_loggers_;
+    static std::map<std::string, std::pair<std::ofstream*, size_t>> _global_streams;
 
-private:
-
-    static std::map<std::string, std::pair<std::ofstream*, size_t>> _streams_;
 
 public:
 
-    client_logger(std::map<std::string, std::vector<severity>> const &other);
+    client_logger(std::map<std::string, std::set<logger::severity>> const &stream);
 
     client_logger &operator=(client_logger const &other) = delete;
 
