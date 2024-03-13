@@ -11,7 +11,7 @@ class client_logger_builder final : public logger_builder
 
 private:
 
-    std::map<std::string, std::set<logger::severity>> _builder_streams;
+    std::map<std::string, std::set<logger::severity>> _streams_in_builder;
 
 public:
 

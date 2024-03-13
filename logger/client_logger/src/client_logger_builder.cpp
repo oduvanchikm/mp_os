@@ -2,25 +2,15 @@
 
 #include "../include/client_logger_builder.h"
 
-client_logger_builder::client_logger_builder()
-{
-
-}
-
-client_logger_builder::~client_logger_builder() noexcept
-{
-
-}
-
 logger_builder *client_logger_builder::add_file_stream(std::string const &stream_file_path, logger::severity severity)
 {
-    if (_builder_streams.find(stream_file_path) != _builder_streams.end())
+    if (_streams_in_builder.find(stream_file_path) != _streams_in_builder.end())
     {
-        _builder_streams[stream_file_path].insert(severity);
+        _streams_in_builder[stream_file_path].insert(severity);
     }
     else
     {
-        _builder_streams.insert({stream_file_path, {severity}});
+        _streams_in_builder.insert({stream_file_path, {severity}});
     }
 
     return this;
@@ -28,13 +18,13 @@ logger_builder *client_logger_builder::add_file_stream(std::string const &stream
 
 logger_builder *client_logger_builder::add_console_stream(logger::severity severity)
 {
-    if (_builder_streams.find("console") != _builder_streams.end())
+    if (_streams_in_builder.find("console") != _streams_in_builder.end())
     {
-        _builder_streams["console"].insert(severity);
+        _streams_in_builder["console"].insert(severity);
     }
     else
     {
-        _builder_streams.insert({"console", {severity}});
+        _streams_in_builder.insert({"console", {severity}});
     }
 
     return this;
@@ -50,17 +40,17 @@ logger_builder* client_logger_builder::transform_with_configuration(
 
 //    std::cout << configuration_file_path << std::endl;
 
-    auto info = nlohmann::json::parse(file);
+    auto info_json = nlohmann::json::parse(file);
 
 //    std::cout << configuration_file_path << std::endl;
 
-    auto pairs = info[configuration_path];
+    auto pairs_json = info_json[configuration_path];
 
 //    std::cout << pairs << std::endl;
 
-    for(auto& elem : pairs)
+    for(auto& item : pairs_json)
     {
-        _builder_streams[elem.value("file", "Not found!")].insert({elem["severity"]});
+        _streams_in_builder[item.value("file", "error")].insert({item["severity"]});
     }
 
     return this;
@@ -68,12 +58,22 @@ logger_builder* client_logger_builder::transform_with_configuration(
 
 logger_builder *client_logger_builder::clear()
 {
-    _builder_streams.clear();
+    _streams_in_builder.clear();
 
     return this;
 }
 
 logger *client_logger_builder::build() const
 {
-    return new client_logger(_builder_streams);
+    return new client_logger(_streams_in_builder);
+}
+
+client_logger_builder::client_logger_builder()
+{
+
+}
+
+client_logger_builder::~client_logger_builder() noexcept
+{
+
 }

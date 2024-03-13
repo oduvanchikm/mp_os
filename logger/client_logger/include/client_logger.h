@@ -2,7 +2,6 @@
 #define MATH_PRACTICE_AND_OPERATING_SYSTEMS_CLIENT_LOGGER_H
 
 #include <logger.h>
-//#include "../src/json.hpp"
 #include <map>
 #include <set>
 #include <iostream>
@@ -14,7 +13,7 @@ class client_logger final : public logger
 
 private:
 
-    std::map<std::string, std::pair<std::ofstream*, std::set<logger::severity>>> _streams;
+    std::map<std::string, std::pair<std::ofstream*, std::set<logger::severity>>> _all_streams;
 
 private:
 

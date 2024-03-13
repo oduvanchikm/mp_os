@@ -1,4 +1,3 @@
-//#include <not_implemented.h>
 #include "../include/client_logger.h"
 
 std::map<std::string, std::pair<std::ofstream*, size_t>> client_logger::_global_streams =
@@ -28,13 +27,13 @@ client_logger::client_logger(std::map<std::string, std::set<severity>> const &bu
             global_stream->second.second++;
         }
 
-        _streams.insert(std::make_pair(builder_stream.first, std::make_pair(stream, builder_stream.second)));
+        _all_streams.insert(std::make_pair(builder_stream.first, std::make_pair(stream, builder_stream.second)));
     }
 }
 
 client_logger::~client_logger() noexcept
 {
-    for (auto &stream : _streams)
+    for (auto &stream : _all_streams)
     {
         auto global_logger = _global_streams[stream.first];
 
@@ -60,7 +59,7 @@ logger const *client_logger::log(const std::string &text, logger::severity sever
     auto string_severity = severity_to_string(severity);
     auto string_time = current_datetime_to_string();
 
-    for (auto &stream : _streams)
+    for (auto &stream : _all_streams)
     {
         if (stream.second.second.find(severity) != stream.second.second.end())
         {
