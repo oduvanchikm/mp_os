@@ -1,14 +1,41 @@
-#include <gtest/gtest.h>
-#include <client_logger.h>
-#include <client_logger_builder.h>
-
-
+//#include <gtest/gtest.h>
+//#include <client_logger.h>
+//#include <client_logger_builder.h>
+#include "../../client_logger/include/client_logger.h"
+#include "../../client_logger/include/client_logger_builder.h"
 
 int main(
     int argc,
     char *argv[])
 {
-    testing::InitGoogleTest(&argc, argv);
+//    testing::InitGoogleTest(&argc, argv);
 
-    return RUN_ALL_TESTS();
+    logger_builder* builder = new client_logger_builder();
+
+    logger* logger_1 = builder
+            ->add_file_stream("file3.txt", logger::severity::information)
+            ->add_file_stream("file2.txt", logger::severity::debug)
+//            ->add_file_stream("file1.txt", logger::severity::debug)
+//            ->add_file_stream("file2.txt", logger::severity::warning)
+//            ->add_console_stream(logger::severity::warning)
+//            ->add_console_stream(logger::severity::debug)
+            ->format_of_string("%t %s %m %d")
+
+
+            ->build();
+
+//    logger_1->debug("debug");
+//    logger_1->trace("trace");
+//    logger_1->error("ererererererere");
+
+    logger_1->log("eeriugierq", logger::severity::debug);
+//    logger_1->log("eerrgewiugierq", logger::severity::warning);
+    logger_1->log("eeriw3r3r24ugierq", logger::severity::information);
+
+    delete builder;
+    delete logger_1;
+
+    return 0;
+
+//    return RUN_ALL_TESTS();
 }

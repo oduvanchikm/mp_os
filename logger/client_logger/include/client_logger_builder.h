@@ -1,14 +1,19 @@
 #ifndef MATH_PRACTICE_AND_OPERATING_SYSTEMS_CLIENT_LOGGER_BUILDER_H
 #define MATH_PRACTICE_AND_OPERATING_SYSTEMS_CLIENT_LOGGER_BUILDER_H
 
-#include <logger_builder.h>
+//#include <logger_builder.h>
+#include "../../logger/include/logger_builder.h"
 #include "client_logger.h"
 #include <map>
-#include <nlohmann/json.hpp>
+//#include <nlohmann/json.hpp>
 
 class client_logger_builder final:
         public logger_builder
 {
+
+private:
+
+    std::string _format_log_string;
 
 private:
 
@@ -48,6 +53,10 @@ public:
     logger_builder *clear() override;
 
     [[nodiscard]] logger *build() const override;
+
+public:
+
+    logger_builder* format_of_string(std::string const &format_log_string) override;
 
 };
 
