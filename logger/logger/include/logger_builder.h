@@ -32,6 +32,10 @@ protected:
     static logger::severity string_to_severity(
         std::string const &severity_string);
 
+public:
+
+    virtual logger_builder* format_of_string(std::string const &format_log_string) = 0;
+
 };
 
 #endif //MATH_PRACTICE_AND_OPERATING_SYSTEMS_LOGGER_BUILDER_H
