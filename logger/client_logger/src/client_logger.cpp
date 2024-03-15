@@ -73,7 +73,7 @@ logger const *client_logger::log(const std::string &text, logger::severity sever
         {
             if (stream.second.first == nullptr)
             {
-                for (int i = 0; _format_log_string[i] != '\0' && _format_log_string[i + 1] != '\0'; i++)
+                for (int i = 0; i < _format_log_string.length() - 1; i++)
                 {
                     if (_format_log_string[i] == '%')
                     {
