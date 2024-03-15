@@ -30,13 +30,13 @@ logger_builder* client_logger_builder::transform_with_configuration(
         std::string const &configuration_file_path,
         std::string const &configuration_path)
 {
-//    std::ifstream file(configuration_file_path);
-//    auto info_json = nlohmann::json::parse(file);
-//    auto pairs_json = info_json[configuration_path];
-//    for(auto& item : pairs_json)
-//    {
-//        _streams_in_builder[item.value("file", "error")].insert({item["severity"]});
-//    }
+    std::ifstream file(configuration_file_path);
+    auto info_json = nlohmann::json::parse(file);
+    auto pairs_json = info_json[configuration_path];
+    for(auto& item : pairs_json)
+    {
+        _streams_in_builder[item.value("file", "error")].insert({item["severity"]});
+    }
 
     return this;
 }
