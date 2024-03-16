@@ -1,14 +1,14 @@
-//#include <gtest/gtest.h>
-//#include <client_logger.h>
-//#include <client_logger_builder.h>
-#include "../../client_logger/include/client_logger.h"
-#include "../../client_logger/include/client_logger_builder.h"
+#include <gtest/gtest.h>
+#include <client_logger.h>
+#include <client_logger_builder.h>
+//#include "../../client_logger/include/client_logger.h"
+//#include "../../client_logger/include/client_logger_builder.h"
 
 int main(
     int argc,
     char *argv[])
 {
-//    testing::InitGoogleTest(&argc, argv);
+    testing::InitGoogleTest(&argc, argv);
 
     logger_builder* builder = new client_logger_builder();
 
@@ -37,7 +37,5 @@ int main(
     delete builder;
     delete logger_1;
 
-    return 0;
-
-//    return RUN_ALL_TESTS();
+    return RUN_ALL_TESTS();
 }
