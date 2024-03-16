@@ -17,23 +17,23 @@ class allocator_buddies_system final:
 
 private:
 
-    void *_trusted_memory;
+    void *_trusted_memory; // указатель на выделенную память
 
 public:
 
     ~allocator_buddies_system() override;
 
     allocator_buddies_system(
-        allocator_buddies_system const &other);
+        allocator_buddies_system const &other) = delete;
 
     allocator_buddies_system &operator=(
-        allocator_buddies_system const &other);
+        allocator_buddies_system const &other) = delete;
 
     allocator_buddies_system(
-        allocator_buddies_system &&other) noexcept;
+        allocator_buddies_system &&other) noexcept = delete;
 
     allocator_buddies_system &operator=(
-        allocator_buddies_system &&other) noexcept;
+        allocator_buddies_system &&other) noexcept = delete;
 
 public:
 
@@ -72,6 +72,14 @@ private:
 private:
 
     inline std::string get_typename() const noexcept override;
+
+private:
+
+    size_t get_ancillary_space_size() const noexcept;
+
+private:
+
+    size_t closest_power_of_two(size_t number);
 
 };
 
