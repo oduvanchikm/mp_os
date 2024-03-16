@@ -3,10 +3,10 @@
 #include "../include/allocator_buddies_system.h"
 
 // метаданные =
-// размер аллокатора + размер логгера + размер всей памяти + размер указателя на первый блок + указатель на объект синхронизации
+// размер аллокатора + размер логгера + размер всей памяти + размер указателя на первый блок + указатель на объект синхронизации (эт потом будет)
 size_t allocator_buddies_system::get_ancillary_space_size() const noexcept
 {
-    return sizeof(logger*) + sizeof(allocator*) + sizeof(size_t) + sizeof(void*);
+    return sizeof(logger*) + sizeof(allocator*) + sizeof(size_t) + sizeof(void*) + sizeof(allocator_with_fit_mode::fit_mode);
 }
 
 size_t allocator_buddies_system::closest_power_of_two(size_t number)
@@ -51,27 +51,32 @@ allocator_buddies_system::allocator_buddies_system(
         logger->error("ERROR");
     }
 
+    // проинициализировали аллокатор
     auto** parent_allocator_space_address = reinterpret_cast<allocator**>(_trusted_memory);
-    *parent_allocator_space_address = parent_allocator; // проинициализировали аллокатор
+    *parent_allocator_space_address = parent_allocator;
 
+    // проинициализировали логгер
     auto** logger_space_address = reinterpret_cast<class logger**>(parent_allocator_space_address + 1);
-    *logger_space_address = logger; // проинициализировали логгер
+    *logger_space_address = logger;
 
+    // записали размер памяти, которую хотим выделить
     size_t* space_size_space_address = reinterpret_cast<size_t*>(logger_space_address + 1);
-    *space_size_space_address = space_size; // записали размер памяти, которую хотим выделить
+    *space_size_space_address = space_size;
 
-    auto* allocation_mode = reinterpret_cast<allocator_with_fit_mode::fit_mode*>(logger_space_address + 1);
-    *allocation_mode = allocate_fit_mode;
-
-    void** first_block_address_space_address = reinterpret_cast<void**>(space_size_space_address + 1);
-    *first_block_address_space_address = reinterpret_cast<void*>(first_block_address_space_address + 1); //
     // указатель на первый блок памяти в выделенном пространстве
+    void** first_block_address = reinterpret_cast<void**>(space_size_space_address + 1);
+    *first_block_address = reinterpret_cast<void*>(first_block_address + 1);
 
     // установили значение первого блока в нулевой указатель, чтобы обозначить, что этот блок свободен
-    *reinterpret_cast<void**>(*first_block_address_space_address) = nullptr;
+    *reinterpret_cast<void**>(*first_block_address) = nullptr;
 
-    // размер первого блока памяти как общий размер выделенного пространства минус размер заголовка блока
-    *reinterpret_cast<size_t*>(reinterpret_cast<void**>(*first_block_address_space_address) + 1) = space_size - sizeof(block_pointer_t);
+    // указатель на следующий свободный блок
+    void** previous_available_block = reinterpret_cast<void**>(first_block_address + 1);
+    *previous_available_block = nullptr;
+
+    // указатель на предыдущий свободный блок
+    void** next_available_block = reinterpret_cast<void**>(previous_available_block + 1);
+    *next_available_block = nullptr;
 
     if (logger != nullptr)
     {
@@ -79,10 +84,36 @@ allocator_buddies_system::allocator_buddies_system(
     }
 }
 
+allocator_with_fit_mode::fit_mode allocator_buddies_system::get_fit_mode() const noexcept
+{
+    return *reinterpret_cast<allocator_with_fit_mode::fit_mode*>(reinterpret_cast<unsigned char*>(_trusted_memory) + sizeof(allocator*) + sizeof(logger*) + sizeof(size_t));
+}
+
+void* allocator_buddies_system::get_first_available_block() const noexcept
+{
+    return reinterpret_cast<void**>(_trusted_memory) + sizeof(allocator*) + sizeof(logger*) + sizeof(size_t) + sizeof(allocator_with_fit_mode::fit_mode))
+}
+
+allocator::block_size_t allocator_buddies_system::get_first_available_block_size(void* block_address) noexcept
+{
+    return reinterpret_cast<allocator::block_size_t>(block_address);
+}
+
 [[nodiscard]] void *allocator_buddies_system::allocate(size_t value_size, size_t values_count)
 {
     auto requested_size = value_size * values_count; // перемножаем, чтобы понять, сколько нужно
     // думаю,что здесь
+
+    allocator_with_fit_mode::fit_mode fit_mode = get_fit_mode();
+    void* current_block = get_first_available_block();
+    size_t current_block_size = get_first_available_block_size(current_block);
+
+    {
+        while (current_block != nullptr)
+        {
+
+        }
+    }
 
 
 

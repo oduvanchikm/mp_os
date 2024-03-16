@@ -81,6 +81,14 @@ private:
 
     size_t closest_power_of_two(size_t number);
 
+private:
+
+    allocator_with_fit_mode::fit_mode get_fit_mode() const noexcept;
+    void* get_first_available_block() const noexcept;
+
+private:
+
+    static block_size_t get_first_available_block_size(void* block_address) noexcept;
 };
 
 #endif //MATH_PRACTICE_AND_OPERATING_SYSTEMS_ALLOCATOR_ALLOCATOR_BUDDIES_SYSTEM_H
