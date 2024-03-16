@@ -21,7 +21,7 @@ logger_builder *client_logger_builder::add_file_stream(std::string const &stream
 
 logger_builder *client_logger_builder::add_console_stream(logger::severity severity)
 {
-    _streams_in_builder["console"].insert(severity);
+    add_file_stream("console", severity);
 
     return this;
 }
@@ -31,7 +31,19 @@ logger_builder* client_logger_builder::transform_with_configuration(
         std::string const &configuration_path)
 {
     std::ifstream file(configuration_file_path);
+
+    if (!(file.is_open()))
+    {
+        throw std::runtime_error("can't open file\n");
+    }
+
+    if (file.peek() == EOF)
+    {
+        throw std::runtime_error("file is empty!!!\n");
+    }
+
     auto info_json = nlohmann::json::parse(file);
+
     auto pairs_json = info_json[configuration_path];
     for(auto& item : pairs_json)
     {

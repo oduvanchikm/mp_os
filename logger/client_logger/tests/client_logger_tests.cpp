@@ -15,11 +15,13 @@ int main(
     logger* logger_1 = builder
             ->add_file_stream("file5.txt", logger::severity::information)
             ->add_file_stream("file7.txt", logger::severity::debug)
+            ->add_console_stream(logger::severity::debug)
+            ->transform_with_configuration("json_logger.json", "logger")
 //            ->add_file_stream("file1.txt", logger::severity::debug)
 //            ->add_file_stream("file2.txt", logger::severity::warning)
 //            ->add_console_stream(logger::severity::warning)
 //            ->add_console_stream(logger::severity::debug)
-            ->format_of_string("%t %s %m %d %d %d %d %d")
+            ->format_of_string("%t %s %m %d %d %d %d %d message")
 
 
             ->build();

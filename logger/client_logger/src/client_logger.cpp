@@ -6,21 +6,24 @@ std::map<std::string, std::pair<std::ofstream*, size_t>> client_logger::_global_
 client_logger::client_logger(std::map<std::string, std::set<severity>> const &builder, std::string const &format_log_string)
 {
     _format_log_string = format_log_string;
-    for (auto &builder_stream : builder)
-    {
-        auto global_stream = _global_streams.find(builder_stream.first);
+    std::ofstream* stream = nullptr;
 
-        std::ofstream* stream = nullptr;
+    for (auto i = builder.begin(); i != builder.end(); ++i)
+    {
+        auto global_stream = _global_streams.find(i->first);
 
         if (global_stream == _global_streams.end())
         {
             if (global_stream->first != "console")
             {
-                stream = new std::ofstream;
-                stream->open(builder_stream.first);
+                stream = new std::ofstream(i->first, std::ios::out);
+            }
+            else
+            {
+                stream = nullptr;
             }
 
-            _global_streams.insert(std::make_pair(builder_stream.first, std::make_pair(stream, 1)));
+            _global_streams.insert(std::make_pair(i->first, std::make_pair(stream, 1)));
         }
         else
         {
@@ -28,7 +31,12 @@ client_logger::client_logger(std::map<std::string, std::set<severity>> const &bu
             global_stream->second.second++;
         }
 
-        _all_streams.insert(std::make_pair(builder_stream.first, std::make_pair(stream, builder_stream.second)));
+        auto streams_in_streams = _all_streams.find(i->first);
+
+        if (streams_in_streams == _all_streams.end())
+        {
+            _all_streams.insert(std::make_pair(i->first, std::make_pair(stream, i->second)));
+        }
     }
 }
 
@@ -67,54 +75,54 @@ logger const *client_logger::log(const std::string &text, logger::severity sever
     std::getline(ss, date_string, ' ');
     std::getline(ss, time_string);
 
+    int len_string = _format_log_string.length();
+
     for (auto &stream : _all_streams)
     {
         if (stream.second.second.find(severity) != stream.second.second.end())
         {
-            if (stream.second.first == nullptr)
+            for (int i = 0; i < len_string - 1; i++)
             {
-                for (int i = 0; i < _format_log_string.length() - 1; i++)
+                if (_format_log_string[i] == '%')
                 {
-                    if (_format_log_string[i] == '%')
+                    if (_format_log_string[i + 1] == 'd')
                     {
-                        if (_format_log_string[i + 1] == 'd')
+                        if (stream.second.first == nullptr)
                         {
                             std::cout << "[" << date_string << "]" << std::endl;
                         }
-                        else if (_format_log_string[i + 1] == 't')
-                        {
-                            std::cout << "[" << time_string << "]" << std::endl;
-                        }
-                        else if (_format_log_string[i + 1] == 's')
-                        {
-                            std::cout << "[" << string_severity << "]" << std::endl;
-                        }
-                        else if (_format_log_string[i + 1] == 'm')
-                        {
-                            std::cout << text << std::endl;
-                        }
-                    }
-                }
-            }
-            else
-            {
-                for (int i = 0; i < _format_log_string.length() - 1; i++)
-                {
-                    if (_format_log_string[i] == '%')
-                    {
-                        if (_format_log_string[i + 1] == 'd')
+                        else
                         {
                             *(stream.second.first) << "[" << date_string << "]";
                         }
-                        else if (_format_log_string[i + 1] == 't')
+                    }
+                    else if (_format_log_string[i + 1] == 't')
+                    {
+                        if (stream.second.first == nullptr)
+                        {
+                            std::cout << "[" << time_string << "]" << std::endl;
+                        }
+                        else
                         {
                             *(stream.second.first) << "[" << time_string << "]";
                         }
-                        else if (_format_log_string[i + 1] == 's')
+                    } else if (_format_log_string[i + 1] == 's')
+                    {
+                        if (stream.second.first == nullptr)
+                        {
+                            std::cout << "[" << string_severity << "]" << std::endl;
+                        }
+                        else
                         {
                             *(stream.second.first) << "[" << string_severity << "]";
                         }
-                        else if (_format_log_string[i + 1] == 'm')
+                    } else if (_format_log_string[i + 1] == 'm')
+                    {
+                        if (stream.second.first == nullptr)
+                        {
+                            std::cout << text << std::endl;
+                        }
+                        else
                         {
                             *(stream.second.first) << text;
                         }
@@ -141,7 +149,7 @@ logger const *client_logger::log(const std::string &text, logger::severity sever
     // O_WRONLY: очередь будет открыта только для записи
 
     mq = mq_open("/my_queue", O_CREAT | O_WRONLY, 0644, &attr);
-    if (mq == -1)
+    if (mq == (mqd_t) - 1)
     {
         perror("mq_open");
         exit(1);
