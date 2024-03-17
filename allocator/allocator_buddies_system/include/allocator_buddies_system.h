@@ -18,6 +18,7 @@ class allocator_buddies_system final:
 private:
 
     void *_trusted_memory; // указатель на выделенную память
+    void* _allocated_block; // поле для хранения адреса найденного блока
 
 public:
 
@@ -88,7 +89,13 @@ private:
 
 private:
 
-    static block_size_t get_first_available_block_size(void* block_address) noexcept;
+    static block_size_t get_available_block_size(void* block_address) noexcept;
+
+    void* get_next_available_block(void* block_address) noexcept;
+
+    void* get_previous_available_block(void* block) noexcept;
+
+    void set_next_available_block(void* previous_block, void* next_block) noexcept;
 };
 
 #endif //MATH_PRACTICE_AND_OPERATING_SYSTEMS_ALLOCATOR_ALLOCATOR_BUDDIES_SYSTEM_H

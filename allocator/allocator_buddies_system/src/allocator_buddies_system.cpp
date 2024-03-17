@@ -1,5 +1,4 @@
-#include <not_implemented.h>
-
+//#include <not_implemented.h>
 #include "../include/allocator_buddies_system.h"
 
 // метаданные =
@@ -91,43 +90,121 @@ allocator_with_fit_mode::fit_mode allocator_buddies_system::get_fit_mode() const
 
 void* allocator_buddies_system::get_first_available_block() const noexcept
 {
-    return reinterpret_cast<void**>(_trusted_memory) + sizeof(allocator*) + sizeof(logger*) + sizeof(size_t) + sizeof(allocator_with_fit_mode::fit_mode))
+    return *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(_trusted_memory) + sizeof(allocator*) + sizeof(logger*) + sizeof(size_t) + sizeof(allocator_with_fit_mode::fit_mode));
 }
 
-allocator::block_size_t allocator_buddies_system::get_first_available_block_size(void* block_address) noexcept
+allocator::block_size_t allocator_buddies_system::get_available_block_size(void* block_address) noexcept
 {
-    return reinterpret_cast<allocator::block_size_t>(block_address);
+    return *reinterpret_cast<allocator::block_size_t*>(reinterpret_cast<void**>(block_address) + 1);
+}
+
+void* allocator_buddies_system::get_next_available_block(void* block_address) noexcept
+{
+    return *reinterpret_cast<void**>(block_address);
+}
+
+void* allocator_buddies_system::get_previous_available_block(void* block) noexcept
+{
+    return *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(block) + sizeof(unsigned char));
+}
+
+void allocator_buddies_system::set_next_available_block(void* previous_block, void* next_block) noexcept
+{
+    // получаем указатель на следующий свободный блок после previous_block
+    void* previous_next_ptr = *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(previous_block) + sizeof(void*));
+
+    // устанавливаем указатель на след блок
+    previous_next_ptr = next_block;
 }
 
 [[nodiscard]] void *allocator_buddies_system::allocate(size_t value_size, size_t values_count)
 {
-    auto requested_size = value_size * values_count; // перемножаем, чтобы понять, сколько нужно
-    // думаю,что здесь
+    auto requested_size_mult = value_size * values_count; // перемножаем, чтобы понять, сколько нужно
+
+    auto requested_size = closest_power_of_two(requested_size_mult); // наверное, нужно так сделать, потому что живем в мире степени двойки
+
+    if (requested_size < sizeof(block_pointer_t) + sizeof(block_size_t))
+    {
+        requested_size = sizeof(block_pointer_t) + sizeof(block_size_t);
+        warning_with_guard("request space size was changed\n");
+    }
+
+    // 1. начинаем поиск подходящего свободного блока
 
     allocator_with_fit_mode::fit_mode fit_mode = get_fit_mode();
-    void* current_block = get_first_available_block();
-    size_t current_block_size = get_first_available_block_size(current_block);
+    void* target_block = nullptr; // указатель на блок, который мы выделяем
 
     {
+        void* next_block = nullptr; // указатель на следующий свободный блок
+        void* current_block = get_first_available_block(); // указатель на текущий свободный блок
+
         while (current_block != nullptr)
         {
+            size_t current_block_size = get_available_block_size(current_block); // находим размер текущего свободного блока
+
+            if (current_block_size >= requested_size) // если вмещается
+            {
+                if (fit_mode == allocator_with_fit_mode::fit_mode::first_fit ||
+                    fit_mode == allocator_with_fit_mode::fit_mode::the_best_fit &&
+                    (target_block == nullptr ||
+                     get_available_block_size(target_block) > current_block_size) ||
+                    fit_mode == allocator_with_fit_mode::fit_mode::the_worst_fit &&
+                    (target_block == nullptr ||
+                     get_available_block_size(target_block) < current_block_size))
+                {
+                    target_block = current_block; // сохраняем указатель на найденный блок
+                }
+            }
+
+            next_block = get_next_available_block(current_block); // получаем указатель на следующий свободный блок
+            current_block = next_block; // переходим к следующему блоку
+        }
+
+        if (target_block == nullptr) // если не нашли свободный блок, то выбрасываем еррор
+        {
+            error_with_guard("can't allocate\n");
+            throw std::bad_alloc();
+        }
+
+        _allocated_block = target_block; // сохраняем адрес подходящего блока, хз зачем
+
+        // 2. удаление из списка найденного свободного блока во избежание дублирования
+
+        void* previous_block = get_previous_available_block(target_block); // получаем адрес предыдущего блока
+        next_block = get_next_available_block(target_block);
+        set_next_available_block(previous_block, next_block); // обновляем указатель
+
+        size_t target_block_size = get_available_block_size(target_block);
+
+//        int j = log2(block_size); // Находим j
+//        if (get_(j) == target_block)
+//        {
+//            set_first_available_block_of_size(j, get_next_available_block(target_block));
+//        }
+
+        // имеем однобитовое поле tag: если блок свободен = 1, если занят = 0
+        *reinterpret_cast<unsigned char*>(target_block) |= 1 ;
+
+        // 3. проверяем, требуется ли разделение блоков
+        while ((target_block_size << 1) >= (requested_size + get_ancillary_space_size()))
+        {
+            // 4. разделяем блоки пополам
+
+
+
 
         }
     }
-
-
-
-    return this;
 }
 
 void allocator_buddies_system::deallocate(void *at)
 {
-    throw not_implemented("void allocator_buddies_system::deallocate(void *)", "your code should be here...");
+
 }
 
 inline void allocator_buddies_system::set_fit_mode(allocator_with_fit_mode::fit_mode mode)
 {
-    throw not_implemented("inline void allocator_buddies_system::set_fit_mode(allocator_with_fit_mode::fit_mode)", "your code should be here...");
+
 }
 
 inline allocator *allocator_buddies_system::get_allocator() const
@@ -137,7 +214,7 @@ inline allocator *allocator_buddies_system::get_allocator() const
 
 std::vector<allocator_test_utils::block_info> allocator_buddies_system::get_blocks_info() const noexcept
 {
-    throw not_implemented("std::vector<allocator_test_utils::block_info> allocator_buddies_system::get_blocks_info() const noexcept", "your code should be here...");
+
 }
 
 inline logger *allocator_buddies_system::get_logger() const
@@ -147,7 +224,8 @@ inline logger *allocator_buddies_system::get_logger() const
 
 inline std::string allocator_buddies_system::get_typename() const noexcept
 {
-    throw not_implemented("inline std::string allocator_buddies_system::get_typename() const noexcept", "your code should be here...");
+    std::string message = "allocator buddies system";
+    return message;
 }
 
 allocator_buddies_system::~allocator_buddies_system()
