@@ -176,7 +176,7 @@ void allocator_buddies_system::set_next_available_block(void* previous_block, vo
 
         size_t target_block_size = get_available_block_size(target_block);
 
-//        int j = log2(block_size); // Находим j
+//        int j = log2(block_size);
 //        if (get_(j) == target_block)
 //        {
 //            set_first_available_block_of_size(j, get_next_available_block(target_block));
