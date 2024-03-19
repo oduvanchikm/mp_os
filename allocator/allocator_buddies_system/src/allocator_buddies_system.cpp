@@ -30,14 +30,20 @@ allocator_buddies_system::allocator_buddies_system(
     {
         if (logger != nullptr)
         {
-            logger->error("ERROR");
+            logger->error("error with allocate memory");
         }
 
         throw std::logic_error("can't initialize allocator instance");
     }
+
+    if (logger != nullptr)
+    {
+        logger->debug("[BUDDY_SYSTEM_ALLOCATOR] start to allocate memory");
+    }
+
     // находим ближайшее большее число степени двойки
     auto new_space_size = closest_power_of_two(space_size);
-    // считаем общий размер памяти с метаданными
+//    // считаем общий размер памяти с метаданными
     auto common_size = new_space_size + get_ancillary_space_size();
     try
     {
@@ -47,7 +53,7 @@ allocator_buddies_system::allocator_buddies_system(
     }
     catch (std::bad_alloc const &ex)
     {
-        logger->error("ERROR");
+        logger->error("error with allocate memory");
     }
 
     // проинициализировали аллокатор
@@ -117,88 +123,105 @@ void allocator_buddies_system::set_next_available_block(void* previous_block, vo
     previous_next_ptr = next_block;
 }
 
+size_t allocator_buddies_system::get_block_power(size_t digit) const noexcept
+{
+    return log2(digit);
+}
+
+void allocator_buddies_system::set_available_block_size(unsigned char* block, size_t size) noexcept
+{
+    size_t* block_header = reinterpret_cast<size_t*>(block);
+    *block_header = size;
+}
+
 [[nodiscard]] void *allocator_buddies_system::allocate(size_t value_size, size_t values_count)
 {
-    auto requested_size_mult = value_size * values_count; // перемножаем, чтобы понять, сколько нужно
-
-    auto requested_size = closest_power_of_two(requested_size_mult); // наверное, нужно так сделать, потому что живем в мире степени двойки
-
-    if (requested_size < sizeof(block_pointer_t) + sizeof(block_size_t))
+    auto requested_size_mult = values_count * value_size; // перемножаем, чтобы понять, сколько нужно
+    if (requested_size_mult == 0)
     {
-        requested_size = sizeof(block_pointer_t) + sizeof(block_size_t);
+        warning_with_guard("a allocate size = 0\n");
+    }
+
+    if (requested_size_mult > 0 && requested_size_mult < sizeof(block_pointer_t) + sizeof(block_size_t))
+    {
+        requested_size_mult = sizeof(block_pointer_t) + sizeof(block_size_t);
         warning_with_guard("request space size was changed\n");
     }
 
-    // 1. начинаем поиск подходящего свободного блока
+    auto requested_size_without_meta_data = closest_power_of_two(requested_size_mult);
+    auto requested_size = requested_size_without_meta_data + get_ancillary_space_size();
 
     allocator_with_fit_mode::fit_mode fit_mode = get_fit_mode();
-    void* target_block = nullptr; // указатель на блок, который мы выделяем
 
+    // 1. начинаем поиск подходящего свободного блока
+
+    void *previous_to_target_block = nullptr; // указатель на предыдущий блок
+    void *target_block = nullptr; // указатель на блок, который мы выделяем
+    void *next_to_target_block = nullptr; // указатель на следующий блок
+
+
+    void *current_block = get_first_available_block(); // указатель на текущий свободный блок
+    void *previous_block = nullptr; // указатель на предыдущий блок
+    void *next_block = nullptr; // указатель на следующий свободный блок
+
+    while (current_block != nullptr)
     {
-        void* next_block = nullptr; // указатель на следующий свободный блок
-        void* current_block = get_first_available_block(); // указатель на текущий свободный блок
+        size_t current_block_size = get_available_block_size(current_block); // находим размер текущего свободного блока
 
-        while (current_block != nullptr)
+        if (current_block_size >= requested_size) // если вмещается
         {
-            size_t current_block_size = get_available_block_size(current_block); // находим размер текущего свободного блока
-
-            if (current_block_size >= requested_size) // если вмещается
+            if (fit_mode == allocator_with_fit_mode::fit_mode::first_fit ||
+                fit_mode == allocator_with_fit_mode::fit_mode::the_best_fit &&
+                (target_block == nullptr ||
+                 get_available_block_size(target_block) > current_block_size) ||
+                fit_mode == allocator_with_fit_mode::fit_mode::the_worst_fit &&
+                (target_block == nullptr ||
+                 get_available_block_size(target_block) < current_block_size))
             {
-                if (fit_mode == allocator_with_fit_mode::fit_mode::first_fit ||
-                    fit_mode == allocator_with_fit_mode::fit_mode::the_best_fit &&
-                    (target_block == nullptr ||
-                     get_available_block_size(target_block) > current_block_size) ||
-                    fit_mode == allocator_with_fit_mode::fit_mode::the_worst_fit &&
-                    (target_block == nullptr ||
-                     get_available_block_size(target_block) < current_block_size))
-                {
-                    target_block = current_block; // сохраняем указатель на найденный блок
-                }
+                previous_to_target_block = previous_block;
+                target_block = current_block; // сохраняем указатель на найденный блок
+                next_to_target_block = next_block;
             }
-
-            next_block = get_next_available_block(current_block); // получаем указатель на следующий свободный блок
-            current_block = next_block; // переходим к следующему блоку
         }
 
-        if (target_block == nullptr) // если не нашли свободный блок, то выбрасываем еррор
-        {
-            error_with_guard("can't allocate\n");
-            throw std::bad_alloc();
-        }
+        next_block = get_next_available_block(current_block); // получаем указатель на следующий свободный блок
+        current_block = next_block; // переходим к следующему блоку
+    }
 
-        _allocated_block = target_block; // сохраняем адрес подходящего блока, хз зачем
-
-        // 2. удаление из списка найденного свободного блока во избежание дублирования
-
-        void* previous_block = get_previous_available_block(target_block); // получаем адрес предыдущего блока
-        next_block = get_next_available_block(target_block);
-        set_next_available_block(previous_block, next_block); // обновляем указатель
-
-        size_t target_block_size = get_available_block_size(target_block);
-
-//        int j = log2(block_size);
-//        if (get_(j) == target_block)
-//        {
-//            set_first_available_block_of_size(j, get_next_available_block(target_block));
-//        }
-
-        // имеем однобитовое поле tag: если блок свободен = 1, если занят = 0
-        *reinterpret_cast<unsigned char*>(target_block) |= 1 ;
-
-        // 3. проверяем, требуется ли разделение блоков
-        while ((target_block_size << 1) >= (requested_size + get_ancillary_space_size()))
-        {
-            // 4. разделяем блоки пополам
+    if (target_block == nullptr) // если не нашли свободный блок, то выбрасываем еррор
+    {
+        error_with_guard("can't allocate\n");
+        throw std::bad_alloc();
+    }
 
 
+    size_t target_block_size = get_available_block_size(target_block);
 
 
-        }
+    while ((target_block_size >> 1) >= (requested_size + get_ancillary_space_size()))
+    {
+        // разделяем блоки пополам
+
+        size_t half_target_size_block = target_block_size >> 1;
+
+        auto* left_buddy = reinterpret_cast<unsigned char*>(target_block);
+        auto* right_buddy = left_buddy + (half_target_size_block);
+
     }
 }
 
-void allocator_buddies_system::deallocate(void *at)
+void allocator_buddies_system::deallocate(void *at) // область памяти, которую нужно освободить
 {
+    auto * target_block = reinterpret_cast<void*>(reinterpret_cast<unsigned char*>(at) - 1);
+
+    debug_with_guard("start to deallocate memory");
+
+
+
+
+
+
+
 
 }
 

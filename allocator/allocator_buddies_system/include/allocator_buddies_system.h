@@ -6,6 +6,7 @@
 #include <allocator_with_fit_mode.h>
 #include <logger_guardant.h>
 #include <typename_holder.h>
+#include <cmath>
 
 class allocator_buddies_system final:
     private allocator_guardant,
@@ -18,7 +19,7 @@ class allocator_buddies_system final:
 private:
 
     void *_trusted_memory; // указатель на выделенную память
-    void* _allocated_block; // поле для хранения адреса найденного блока
+//    void* _allocated_block; // поле для хранения адреса найденного блока
 
 public:
 
@@ -96,6 +97,10 @@ private:
     void* get_previous_available_block(void* block) noexcept;
 
     void set_next_available_block(void* previous_block, void* next_block) noexcept;
+
+    size_t get_block_power(size_t digit) const noexcept;
+
+    void set_available_block_size(unsigned char* block, size_t size) noexcept;
 };
 
 #endif //MATH_PRACTICE_AND_OPERATING_SYSTEMS_ALLOCATOR_ALLOCATOR_BUDDIES_SYSTEM_H
