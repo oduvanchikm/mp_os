@@ -83,49 +83,48 @@ logger const *client_logger::log(const std::string &text, logger::severity sever
         {
             for (int i = 0; i < len_string - 1; i++)
             {
-                if (_format_log_string[i] == '%')
+                if (_format_log_string[i] == '%' && _format_log_string[i + 1] == 'd')
                 {
-                    if (_format_log_string[i + 1] == 'd')
+                    if (stream.second.first == nullptr)
                     {
-                        if (stream.second.first == nullptr)
-                        {
-                            std::cout << "[" << date_string << "]" << std::endl;
-                        }
-                        else
-                        {
-                            *(stream.second.first) << "[" << date_string << "]";
-                        }
+                        std::cout << "[" << date_string << "]" << std::endl;
                     }
-                    else if (_format_log_string[i + 1] == 't')
+                    else
                     {
-                        if (stream.second.first == nullptr)
-                        {
-                            std::cout << "[" << time_string << "]" << std::endl;
-                        }
-                        else
-                        {
-                            *(stream.second.first) << "[" << time_string << "]";
-                        }
-                    } else if (_format_log_string[i + 1] == 's')
+                        *(stream.second.first) << "[" << date_string << "]";
+                    }
+                }
+                else if (_format_log_string[i] == '%' && _format_log_string[i + 1] == 't')
+                {
+                    if (stream.second.first == nullptr)
                     {
-                        if (stream.second.first == nullptr)
-                        {
-                            std::cout << "[" << string_severity << "]" << std::endl;
-                        }
-                        else
-                        {
-                            *(stream.second.first) << "[" << string_severity << "]";
-                        }
-                    } else if (_format_log_string[i + 1] == 'm')
+                        std::cout << "[" << time_string << "]" << std::endl;
+                    }
+                    else
                     {
-                        if (stream.second.first == nullptr)
-                        {
-                            std::cout << text << std::endl;
-                        }
-                        else
-                        {
-                            *(stream.second.first) << text;
-                        }
+                        *(stream.second.first) << "[" << time_string << "]";
+                    }
+                }
+                else if (_format_log_string[i] == '%' && _format_log_string[i + 1] == 's')
+                {
+                    if (stream.second.first == nullptr)
+                    {
+                        std::cout << "[" << string_severity << "]" << std::endl;
+                    }
+                    else
+                    {
+                        *(stream.second.first) << "[" << string_severity << "]";
+                    }
+                }
+                else if (_format_log_string[i] == '%' && _format_log_string[i + 1] == 'm')
+                {
+                    if (stream.second.first == nullptr)
+                    {
+                        std::cout << "[" << text << "]" << std::endl;
+                    }
+                    else
+                    {
+                        *(stream.second.first) << "[" << text << "]";
                     }
                 }
             }
