@@ -115,6 +115,22 @@ int main(
 {
     testing::InitGoogleTest(&argc, argv);
 
+//    logger_builder* builder = new client_logger_builder();
+//
+//    logger* logger = builder
+//            ->add_file_stream("file_new.txt", logger::severity::debug)
+//            ->build();
+//
+//
+//    allocator* allocator_1 = new allocator_buddies_system(256, nullptr, logger, allocator_with_fit_mode::fit_mode::first_fit);
+//    void* mmm = allocator_1->allocate(1, 3);
+//    allocator_1->deallocate(mmm);
+//
+//
+//    delete allocator_1;
+//    delete logger;
+//    delete builder;
+
 
     return RUN_ALL_TESTS();
 }

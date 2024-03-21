@@ -7,6 +7,7 @@
 #include <logger_guardant.h>
 #include <typename_holder.h>
 #include <cmath>
+#include <mutex>
 
 class allocator_buddies_system final:
     private allocator_guardant,
@@ -19,7 +20,7 @@ class allocator_buddies_system final:
 private:
 
     void *_trusted_memory; // указатель на выделенную память
-//    void* _allocated_block; // поле для хранения адреса найденного блока
+//    std::mutex _buddies_system_mutex; // мьютекс
 
 public:
 
@@ -96,11 +97,14 @@ private:
 
     void* get_previous_available_block(void* block) noexcept;
 
-    void set_next_available_block(void* previous_block, void* next_block) noexcept;
+    void* get_buddy(void* target_block_first_buddy, size_t target_block_size_first_buddy) noexcept;
 
-    size_t get_block_power(size_t digit) const noexcept;
+    std::mutex* get_mutex() noexcept;
 
-    void set_available_block_size(unsigned char* block, size_t size) noexcept;
+    void* get_start_allocated_memory_address() noexcept;
+
+    bool check_free_block(void* target_block) const;
+
 };
 
 #endif //MATH_PRACTICE_AND_OPERATING_SYSTEMS_ALLOCATOR_ALLOCATOR_BUDDIES_SYSTEM_H
