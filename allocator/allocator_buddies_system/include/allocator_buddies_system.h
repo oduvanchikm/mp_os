@@ -8,6 +8,7 @@
 #include <typename_holder.h>
 #include <cmath>
 #include <mutex>
+#include <sstream>
 
 class allocator_buddies_system final:
     private allocator_guardant,
@@ -19,8 +20,7 @@ class allocator_buddies_system final:
 
 private:
 
-    void *_trusted_memory; // указатель на выделенную память
-//    std::mutex _buddies_system_mutex; // мьютекс
+    void *_trusted_memory;
 
 public:
 
@@ -57,20 +57,11 @@ public:
 
 public:
 
-    inline void set_fit_mode(
-        allocator_with_fit_mode::fit_mode mode) override;
-
-private:
-
-    inline allocator *get_allocator() const override;
+    inline void set_fit_mode(allocator_with_fit_mode::fit_mode mode) override;
 
 public:
 
     std::vector<allocator_test_utils::block_info> get_blocks_info() const noexcept override;
-
-private:
-
-    inline logger *get_logger() const override;
 
 private:
 
@@ -82,28 +73,38 @@ private:
 
 private:
 
-    size_t closest_power_of_two(size_t number);
+    size_t closest_power_of_two(size_t number) const;
+
+    size_t get_power_for_size_block(size_t block_size) const;
 
 private:
-
-    allocator_with_fit_mode::fit_mode get_fit_mode() const noexcept;
-    void* get_first_available_block() const noexcept;
-
-private:
-
-    static block_size_t get_available_block_size(void* block_address) noexcept;
-
-    void* get_next_available_block(void* block_address) noexcept;
-
-    void* get_previous_available_block(void* block) noexcept;
 
     void* get_buddy(void* target_block_first_buddy, size_t target_block_size_first_buddy) noexcept;
-
-    std::mutex* get_mutex() noexcept;
 
     void* get_start_allocated_memory_address() noexcept;
 
     bool check_free_block(void* target_block) const;
+
+private:
+
+    inline allocator *get_allocator() const override;
+
+    inline logger *get_logger() const override;
+
+    static block_size_t get_available_block_size(void* block_address) noexcept;
+
+    allocator_with_fit_mode::fit_mode get_fit_mode() const noexcept;
+
+    std::mutex* get_mutex() noexcept;
+
+    void* get_first_available_block() const noexcept;
+
+    size_t get_power_of_block_size(void* available_block_address) const;
+
+    void* get_previous_available_block(void* block) noexcept;
+
+    void* get_next_available_block(void* block_address) noexcept;
+
 
 };
 
