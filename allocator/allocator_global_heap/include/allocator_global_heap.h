@@ -30,10 +30,10 @@ public:
         allocator_global_heap const &other) = delete;
 
     allocator_global_heap(
-        allocator_global_heap &&other) noexcept;
+        allocator_global_heap &&other) noexcept = delete;
 
     allocator_global_heap &operator=(
-        allocator_global_heap &&other) noexcept;
+        allocator_global_heap &&other) noexcept = delete;
 
 public:
 
@@ -55,6 +55,8 @@ private:
 private:
 
     inline std::string get_typename() const noexcept override;
+
+    std::string get_block_of_memory_state(void *at) const;
 
 public:
 
