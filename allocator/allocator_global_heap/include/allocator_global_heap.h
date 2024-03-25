@@ -5,6 +5,11 @@
 #include <logger.h>
 #include <logger_guardant.h>
 #include <typename_holder.h>
+#include <logger_builder.h>
+#include "../../../logger/client_logger/include/client_logger.h"
+//#include "../../../logger/client_logger/include/client_logger_builder.h"
+//#include <client_logger.h>
+//#include <client_logger_builder.h>
 
 class allocator_global_heap final:
     public allocator,
