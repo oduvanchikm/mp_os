@@ -101,12 +101,11 @@ private:
 
     size_t get_power_of_block_size(void* available_block_address) const;
 
-    void* get_previous_available_block(void* block) noexcept;
-
-    void* get_next_available_block(void* block_address) const noexcept;
+    void* get_next_block(void* block_address) const noexcept;
 
     std::string get_block_of_memory_state(void *at) const;
 
+    void* get_next_free_block(void* address_block);
 
 };
 
