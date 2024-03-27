@@ -79,7 +79,7 @@ private:
 
 private:
 
-    void* get_buddy(void* target_block_first_buddy, size_t target_block_size_first_buddy) noexcept;
+    void* get_buddy(void* target_block_first_buddy) noexcept;
 
     void* get_start_allocated_memory_address() noexcept;
 
@@ -105,7 +105,9 @@ private:
 
     std::string get_block_of_memory_state(void *at) const;
 
-    void* get_next_free_block(void* address_block);
+    void* get_next_available_block(void* address_block);
+
+    short get_power_of_two(size_t number);
 
 };
 
