@@ -1,30 +1,5 @@
 #include "../include/allocator_buddies_system.h"
 
-std::string allocator_buddies_system::get_block_of_memory_state(void *at) const
-{
-    debug_with_guard("ALLOCATOR_BUDDIES_SYSTEM: start to get block memory state");
-    std::cout << "ALLOCATOR_BUDDIES_SYSTEM: start to get block memory state" << std::endl;
-
-    std::string state_string;
-    auto* bytes = reinterpret_cast<unsigned char*>(at);
-
-    void* block = reinterpret_cast<void*>(reinterpret_cast<unsigned char*>(at) - sizeof(unsigned char) - sizeof(short) - sizeof(void*) - sizeof(void*));
-
-    std::cout << "to string: " << std::to_string(*(reinterpret_cast<unsigned char*>(at) - sizeof(unsigned char) - sizeof(short) - sizeof(void*) - sizeof(void*))) << std::endl;
-
-    size_t* block_size = reinterpret_cast<size_t*>(block);
-
-    for(int i = 0; i < *block_size; i++)
-    {
-        state_string += std::to_string(static_cast<int>(bytes[i])) + " ";
-    }
-
-    debug_with_guard("ALLOCATOR_BUDDIES_SYSTEM: finish to get block memory state");
-    std::cout << "ALLOCATOR_BUDDIES_SYSTEM: finish to get block memory state" << std::endl;
-
-    return state_string;
-}
-
 size_t allocator_buddies_system::get_ancillary_space_size() const noexcept
 {
     return sizeof(logger*) + sizeof(allocator*) + sizeof(size_t) + sizeof(void*) + sizeof(allocator_with_fit_mode::fit_mode) + sizeof(std::mutex*);
@@ -368,9 +343,9 @@ void allocator_buddies_system::deallocate(void *at)
 
     short target_block_size = get_power_of_block_size(target_block);
 
-    std::string string_block_status = get_block_of_memory_state(at);
-
-    std::cout << "ALLOCATOR_BUDDIES_SYSTEM: state blocks memory" << string_block_status << std::endl;
+//    std::string string_block_status = get_block_of_memory_state(at);
+//
+//    std::cout << "ALLOCATOR_BUDDIES_SYSTEM: state blocks memory" << string_block_status << std::endl;
 
     void* next_target_block = get_first_available_block();
     void* previous_target_block = nullptr;
