@@ -2,7 +2,7 @@
 
 size_t allocator_buddies_system::get_ancillary_space_size() const noexcept
 {
-    return sizeof(logger*) + sizeof(allocator*) + sizeof(size_t) + sizeof(void*) + sizeof(allocator_with_fit_mode::fit_mode) + sizeof(std::mutex*);
+    return sizeof(logger*) + sizeof(allocator*) + sizeof(size_t) + sizeof(void*) + sizeof(allocator_with_fit_mode::fit_mode) + sizeof(std::mutex*) + sizeof(size_t);
 }
 
 allocator_buddies_system::allocator_buddies_system(
