@@ -77,15 +77,13 @@ private:
 
     void* get_start_allocated_memory_address() noexcept;
 
-    bool check_free_block(void* target_block) const;
+    bool is_free_block(void *block_memory) const;
 
 private:
 
     inline allocator *get_allocator() const override;
 
     inline logger *get_logger() const override;
-
-    static block_size_t get_available_block_size(void* block_address) noexcept;
 
     allocator_with_fit_mode::fit_mode get_fit_mode() const noexcept;
 
@@ -102,6 +100,8 @@ private:
     void* get_next_available_block(void* address_block);
 
     short get_power_of_two(size_t number);
+
+    size_t* get_free_size() const noexcept;
 
 
 

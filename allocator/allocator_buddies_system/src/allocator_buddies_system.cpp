@@ -6,9 +6,12 @@ std::string allocator_buddies_system::get_block_of_memory_state(void *at) const
     std::cout << "ALLOCATOR_BUDDIES_SYSTEM: start to get block memory state" << std::endl;
 
     std::string state_string;
-    auto* bytes = reinterpret_cast<unsigned char *>(at);
+    auto* bytes = reinterpret_cast<unsigned char*>(at);
 
-    void* block = reinterpret_cast<void *>(reinterpret_cast<unsigned char*>(at) - sizeof(bool*) - sizeof(short) - sizeof(void*) - sizeof(void*));
+    void* block = reinterpret_cast<void*>(reinterpret_cast<unsigned char*>(at) - sizeof(unsigned char) - sizeof(short) - sizeof(void*) - sizeof(void*));
+
+    std::cout << "to string: " << std::to_string(*(reinterpret_cast<unsigned char*>(at) - sizeof(unsigned char) - sizeof(short) - sizeof(void*) - sizeof(void*))) << std::endl;
+
     size_t* block_size = reinterpret_cast<size_t*>(block);
 
     for(int i = 0; i < *block_size; i++)
@@ -33,7 +36,7 @@ allocator_buddies_system::allocator_buddies_system(
     logger *logger,
     allocator_with_fit_mode::fit_mode allocate_fit_mode)
 {
-    if (1 << space_size < (sizeof(bool) + sizeof(short) + sizeof(void*) + sizeof(void*)))
+    if (1 << space_size < (sizeof(unsigned char) + sizeof(short) + sizeof(void*) + sizeof(void*)))
     {
         if (logger != nullptr)
         {
@@ -41,16 +44,11 @@ allocator_buddies_system::allocator_buddies_system(
         }
         throw std::logic_error("ALLOCATOR_BUDDIES_SYSTEM: can't initialize allocator instance, size is too small");
     }
-    std::cout << "goodbad" << std::endl;
 
     if (logger != nullptr)
     {
         logger->debug("ALLOCATOR_BUDDIES_SYSTEM: the beginning of the constructor's work, allocator start creating");
     }
-
-    //size_t metadata_one_block = ;
-
-//    size_t size_of_memory_allocate = 1 << space_size;
 
     size_t common_size = (1 << space_size) + get_ancillary_space_size();
 
@@ -87,19 +85,23 @@ allocator_buddies_system::allocator_buddies_system(
     auto* mutex_buddy_system = new std::mutex;
     *mutex_space_address = mutex_buddy_system;
 
-    void** first_free_block_address = reinterpret_cast<void**>(mutex_space_address + 1);
+    size_t* free_size_of_memory = reinterpret_cast<size_t*>(mutex_space_address + 1);
+    *free_size_of_memory = space_size;
 
+    void** first_free_block_address = reinterpret_cast<void**>(free_size_of_memory + 1);
     *first_free_block_address = first_free_block_address + 1;
 
     // TODO: metadata block
 
-    bool* is_busy_space_block = reinterpret_cast<bool*>(*first_free_block_address);
+    auto* is_busy_space_block = reinterpret_cast<unsigned char*>(*first_free_block_address);
     *is_busy_space_block = 0;     // 0 - free, 1 - occupied
 
-    short* block_space_power = reinterpret_cast<short*>(is_busy_space_block + 1);
+    std::cout << "is busy block " << std::to_string(*reinterpret_cast<unsigned char*>(*first_free_block_address)) << std::endl;
+
+    auto* block_space_power = reinterpret_cast<short*>(is_busy_space_block + 1);
     *block_space_power = space_size;
 
-    std::cout << std::to_string(*reinterpret_cast<short*>(is_busy_space_block + 1)) << std::endl;
+    std::cout << "power " << std::to_string(*reinterpret_cast<short*>(is_busy_space_block + 1)) << std::endl;
 
     void** previous_available_block = reinterpret_cast<void**>(block_space_power + 1);
     *previous_available_block = nullptr;
@@ -119,6 +121,11 @@ inline allocator *allocator_buddies_system::get_allocator() const
     return *reinterpret_cast<allocator**>(reinterpret_cast<unsigned char*>(_trusted_memory));
 }
 
+size_t* allocator_buddies_system::get_free_size() const noexcept
+{
+    return reinterpret_cast<size_t*>(reinterpret_cast<unsigned char*>(_trusted_memory) + sizeof(allocator*) + sizeof(logger*) + sizeof(size_t) + sizeof(allocator_buddies_system::fit_mode) + sizeof(std::mutex*));
+}
+
 inline logger *allocator_buddies_system::get_logger() const
 {
     return *reinterpret_cast<logger**>(reinterpret_cast<unsigned char*>(_trusted_memory) + sizeof(allocator*));
@@ -136,18 +143,17 @@ std::mutex* allocator_buddies_system::get_mutex() noexcept
 
 void* allocator_buddies_system::get_first_available_block() const noexcept
 {
-    std::cout << "goodddd" << std::endl;
-    return *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(_trusted_memory) + sizeof(allocator*) + sizeof(logger*) + sizeof(size_t) + sizeof(allocator_with_fit_mode::fit_mode) + sizeof(std::mutex*));
+    return *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(_trusted_memory) + sizeof(allocator*) + sizeof(logger*) + sizeof(size_t) + sizeof(allocator_with_fit_mode::fit_mode) + sizeof(std::mutex*) + sizeof(size_t));
 }
 
-bool allocator_buddies_system::check_free_block(void* target_block) const
+bool allocator_buddies_system::is_free_block(void *block_memory) const
 {
-    return *reinterpret_cast<bool*>(target_block) == 0;
+    return *reinterpret_cast<short*>(block_memory) == 0;
 }
 
 size_t allocator_buddies_system::get_power_of_block_size(void* available_block_address) const
 {
-    return *reinterpret_cast<size_t*>(reinterpret_cast<unsigned char*>(available_block_address) + sizeof(bool));
+    return *reinterpret_cast<size_t*>(reinterpret_cast<unsigned char*>(available_block_address) + sizeof(unsigned char)); //TODO
 }
 
 void* allocator_buddies_system::get_next_block(void* address_block) const noexcept
@@ -162,14 +168,9 @@ void* allocator_buddies_system::get_next_block(void* address_block) const noexce
     return reinterpret_cast<void*>(reinterpret_cast<unsigned char *>(address_block) + (1 << *reinterpret_cast<size_t*>(address_block)));
 }
 
-//size_t allocator_buddies_system::get_available_block_size(void* block_address) noexcept
-//{
-//    return *reinterpret_cast<size_t*>(block_address);
-//}
-
 void* allocator_buddies_system::get_next_available_block(void* address_block)
 {
-    return *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(address_block) + sizeof(bool) + sizeof(short) + sizeof(void*));
+    return *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(address_block) + sizeof(unsigned char) + sizeof(short) + sizeof(void*));
 }
 
 short allocator_buddies_system::get_power_of_two(size_t number)
@@ -177,20 +178,12 @@ short allocator_buddies_system::get_power_of_two(size_t number)
     return static_cast<short>(ceil(log2(number)));
 }
 
-template <typename T>
-std::string to_string(T object)
-{
-    std::stringstream stream;
-    stream << object;
-
-    return stream.str();
-}
-
 [[nodiscard]] void *allocator_buddies_system::allocate(size_t value_size, size_t values_count)
 {
     logger* log = get_logger();
-//    std::mutex* mutex_buddy_system = get_mutex();
-//    std::lock_guard<std::mutex> lock(*mutex_buddy_system);
+    std::mutex* mutex_buddy_system = get_mutex();
+    std::lock_guard<std::mutex> lock(*mutex_buddy_system);
+    std::cout << "MUTEX HAS CREATED AND LOCKED" << std::endl;
 
     if (log != nullptr)
     {
@@ -200,12 +193,15 @@ std::string to_string(T object)
     }
 
     size_t requested_size_mult = values_count * value_size;
-    size_t requested_size = requested_size_mult + sizeof (bool) + sizeof (short) + 2 * sizeof (void*);
+    size_t requested_size = requested_size_mult + sizeof(unsigned char) + sizeof(short) + 2 * sizeof(void*);
     size_t requested_power_size = get_power_of_two(requested_size);
 
-    std::cout << requested_power_size << std::endl;
+    std::cout << "requested power size: " << requested_power_size << std::endl;
 
     allocator_with_fit_mode::fit_mode fit_mode = get_fit_mode();
+    size_t* available_size = get_free_size();
+
+    std::cout << "free_size: " << std::to_string(*available_size) << std::endl;
 
     void* previous_to_target_block = nullptr;
     void* target_block = nullptr;
@@ -213,8 +209,6 @@ std::string to_string(T object)
     {
         void* current_block = get_first_available_block();
         void* previous_block = nullptr;
-
-        //std::cout << to_string(current_block) << std::endl;
 
         while (current_block != nullptr)
         {
@@ -230,82 +224,89 @@ std::string to_string(T object)
                 fit_mode == allocator_with_fit_mode::fit_mode::the_worst_fit && (target_block == nullptr ||
                         get_power_of_block_size(target_block) < current_block_size)))
             {
-                std::cout << "bad " << std::endl;
+                std::cout << "cool" << std::endl;
                 previous_to_target_block = previous_block;
                 target_block = current_block;
                 next_to_target_block = get_next_available_block(current_block);
             }
-            std::cout << "lalala" << std::endl;
+
+            std::cout << "bad" << std::endl;
             previous_block = current_block;
             current_block = get_next_available_block(current_block);
+            std::cout << "bad" << std::endl;
         }
     }
-    std::cout << "lalakgopkdgapkdla" << std::endl;
-
+    std::cout << "bad" << std::endl;
     if (target_block == nullptr)
     {
-        std::cout << "target_block " << target_block << std::endl;
+        std::cout << "errororor" << std::endl;
         error_with_guard("ALLOCATOR_BUDDIES_SYSTEM: memory allocation error")->
         trace_with_guard("ALLOCATOR_BUDDIES_SYSTEM: memory allocate has finished");
         throw std::bad_alloc();
     }
 
-    //std::cout << "target_block_2 " << target_block << std::endl;
+//    auto target_block_size_power = *reinterpret_cast<size_t*>(target_block);
 
-    auto target_block_size_power = get_power_of_block_size(target_block);
+    auto target_block_size = *reinterpret_cast<size_t*>(target_block);
+
+    auto target_block_size_power = get_power_of_two(target_block_size);
+
+    void* next_available_block_ptr = get_next_available_block(target_block);
+
+    std::cout << "((1 << target_block_size_power) >> 1): " << ((1 << target_block_size_power) >> 1) << std::endl;
+    std::cout << "target block size power: " << target_block_size_power << std::endl;
+    std::cout << "1 << target_block_size_power: " << (1 << target_block_size_power) << std::endl;
 
     while (((1 << target_block_size_power) >> 1) >= (1 << requested_power_size))
     {
-        // TODO: THE LOGIC NEEDS TO BE REVIEWED AGAIN
+        std::cout << "where are you?" << std::endl;
 
         target_block_size_power--;
 
-        bool* is_busy_space_block = reinterpret_cast<bool *>(target_block);
-        short* block_space_size_power = reinterpret_cast<short *>(is_busy_space_block + 1);
-        void** previous_available_block = reinterpret_cast<void**>(block_space_size_power + 1);
-        void** next_available_block = reinterpret_cast<void**>(previous_available_block + 1);
+        auto* is_busy_space_block = reinterpret_cast<unsigned char*>(target_block);
+        auto* block_space_size_power = reinterpret_cast<short*>(is_busy_space_block + 1);
+        auto** previous_available_block = reinterpret_cast<void**>(block_space_size_power + 1);
+        auto** next_available_block = reinterpret_cast<void**>(previous_available_block + 1);
 
-//        auto* left_buddie = reinterpret_cast<unsigned char*>(target_block);
-//        auto* right_buddie = left_buddie + (1 << target_block_size_power);
+        void* buddie = reinterpret_cast<void*>(reinterpret_cast<unsigned char*>(target_block) + (1 << target_block_size_power));
 
-        void* buddie = reinterpret_cast<void *>(reinterpret_cast<char *>(target_block) + (1 << target_block_size_power));
-
-        bool* is_busy_space_block_right_buddie = reinterpret_cast<bool *>(buddie);
-        short* block_space_size_power_right_buddie = reinterpret_cast<short *>(is_busy_space_block_right_buddie + 1);
-        void** previous_available_block_right_buddie = reinterpret_cast<void**>(block_space_size_power_right_buddie + 1);
-        void** next_available_block_right_buddie = reinterpret_cast<void**>(previous_available_block_right_buddie + 1);
+        auto* is_busy_space_block_buddie = reinterpret_cast<unsigned char*>(buddie);
+        auto* block_space_size_power_buddie = reinterpret_cast<short *>(is_busy_space_block_buddie + 1);
+        auto** previous_available_block_buddie = reinterpret_cast<void**>(block_space_size_power_buddie + 1);
+        auto** next_available_block_buddie = reinterpret_cast<void**>(previous_available_block_buddie + 1);
 
         // 0 - free, 1 - occupied
 
+        *is_busy_space_block_buddie = 0;
+        *block_space_size_power_buddie = target_block_size_power;
+        *previous_available_block_buddie = target_block;
+        *next_available_block_buddie = next_available_block_ptr;
 
-        *is_busy_space_block_right_buddie = 0;
-        *block_space_size_power_right_buddie = target_block_size_power;
-        *previous_available_block_right_buddie = target_block;
-//        *next_available_block_right_buddie = get_next_available_block(target_block);
-        *next_available_block_right_buddie = next_to_target_block;
-
-        // TODO: THE LOGIC NEEDS TO BE REVIEWED AGAIN
-
-        *next_available_block = buddie;
         *block_space_size_power = target_block_size_power;
+        *next_available_block = buddie;
     }
 
     if (previous_to_target_block == nullptr)
     {
-        void **ptr_first_available = reinterpret_cast<void **>(reinterpret_cast<unsigned char *>(_trusted_memory) + sizeof(allocator *) + sizeof(logger *) + sizeof(short) + sizeof(allocator_with_fit_mode::fit_mode) + sizeof(std::mutex*));
-        *ptr_first_available = get_next_block(target_block);
+        void **first_available_block = reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(_trusted_memory) + sizeof(allocator*) + sizeof(logger*) + sizeof(short) + sizeof(allocator_with_fit_mode::fit_mode) + sizeof(std::mutex*) + sizeof(size_t));
+
+        *first_available_block = get_next_block(target_block);
     }
 
-    *reinterpret_cast<bool*>(reinterpret_cast<short*>(target_block) + 1) = true;
+    (*available_size) -= (1 << target_block_size_power);
 
-    *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(target_block) + sizeof(bool) + sizeof(short)) = _trusted_memory;
+    *reinterpret_cast<unsigned char*>(target_block) = 1;
 
+    *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(target_block) + sizeof(unsigned char) + sizeof(short)) = _trusted_memory;
 
-    auto final_allocated_block = reinterpret_cast<void*>(reinterpret_cast<unsigned char*>(target_block) + sizeof(bool) + sizeof(short) + sizeof(void*) + sizeof(void*));
+    auto* final_allocated_block = reinterpret_cast<void*>(reinterpret_cast<unsigned char*>(target_block) + sizeof(unsigned char) + sizeof(short) + sizeof(void*) + sizeof(void*));
 
-    std::string string_result_status_blocks = get_block_of_memory_state(target_block);
-    std::cout << "ALLOCATOR_BUDDIES_SYSTEM: state of blocks: " << string_result_status_blocks << std::endl;
     trace_with_guard("ALLOCATOR_BUDDIES_SYSTEM: memory allocate has finished");
+    information_with_guard("ALLOCATOR_BUDDIES_SYSTEM: information about free size: " + std::to_string(*available_size));
+    std::cout << "ALLOCATOR_BUDDIES_SYSTEM: information about free size: " + std::to_string(*available_size) << std::endl;
+    std::cout << "ALLOCATOR_BUDDIES_SYSTEM: memory allocate has finished" << std::endl;
+
+    get_blocks_info();
 
     return final_allocated_block;
 }
@@ -317,6 +318,9 @@ void* allocator_buddies_system::get_start_allocated_memory_address() noexcept
 
 void* allocator_buddies_system::get_buddy(void* target_block_first_buddy) noexcept
 {
+    trace_with_guard("ALLOCATOR_BUDDIES_SYSTEM: get buddy has started");
+    std::cout << "ALLOCATOR_BUDDIES_SYSTEM: get buddy has started" << std::endl;
+
     size_t target_block_size_first_buddy = 1 << get_power_of_block_size(target_block_first_buddy);
 
     auto* allocated_memory_address = get_start_allocated_memory_address();
@@ -325,6 +329,9 @@ void* allocator_buddies_system::get_buddy(void* target_block_first_buddy) noexce
     auto buddies = address ^ target_block_size_first_buddy;
 
     auto result = reinterpret_cast<void*>(reinterpret_cast<unsigned char*>(allocated_memory_address) + buddies);
+
+    trace_with_guard("ALLOCATOR_BUDDIES_SYSTEM: get buddy has finished");
+    std::cout << "ALLOCATOR_BUDDIES_SYSTEM: get buddy has finished" << std::endl;
 
     return result;
 }
@@ -337,6 +344,7 @@ void allocator_buddies_system::deallocate(void *at)
 
     if (log != nullptr)
     {
+        std::cout << "ALLOCATOR_BUDDIES_SYSTEM: memory deallocate has started" << std::endl;
         log->trace("ALLOCATOR_BUDDIES_SYSTEM: memory deallocate has started");
     }
 
@@ -356,7 +364,7 @@ void allocator_buddies_system::deallocate(void *at)
         throw std::bad_alloc();
     }
 
-    void* target_block = reinterpret_cast<void*>(reinterpret_cast<unsigned char*>(at) - sizeof(bool*) - sizeof(short) - sizeof(void*) - sizeof(void*));
+    void* target_block = reinterpret_cast<void*>(reinterpret_cast<unsigned char*>(at) - sizeof(unsigned char*) - sizeof(short) - sizeof(void*) - sizeof(void*));
 
     short target_block_size = get_power_of_block_size(target_block);
 
@@ -367,7 +375,7 @@ void allocator_buddies_system::deallocate(void *at)
     void* next_target_block = get_first_available_block();
     void* previous_target_block = nullptr;
 
-    bool* is_busy_space_block = reinterpret_cast<bool *>(target_block);
+    unsigned char* is_busy_space_block = reinterpret_cast<unsigned char*>(target_block);
     short* block_space_size_power = reinterpret_cast<short *>(is_busy_space_block + 1);
     void** previous_available_block = reinterpret_cast<void**>(block_space_size_power + 1);
     void** next_available_block = reinterpret_cast<void**>(previous_available_block + 1);
@@ -378,12 +386,12 @@ void allocator_buddies_system::deallocate(void *at)
 
     if (previous_target_block == nullptr)
     {
-        void** first_free_block = reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(_trusted_memory) + sizeof(allocator*) + sizeof(logger*) + sizeof(size_t) + sizeof(allocator_with_fit_mode::fit_mode) + sizeof(std::mutex*));
+        void** first_free_block = reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(_trusted_memory) + sizeof(allocator*) + sizeof(logger*) + sizeof(size_t) + sizeof(allocator_with_fit_mode::fit_mode) + sizeof(std::mutex*) + sizeof(size_t));
         *first_free_block = target_block;
     }
     else
     {
-        bool* is_busy_space_block_previous = reinterpret_cast<bool *>(previous_target_block);
+        unsigned char* is_busy_space_block_previous = reinterpret_cast<unsigned char*>(previous_target_block);
         short* block_space_size_power_previous = reinterpret_cast<short *>(is_busy_space_block_previous + 1);
         void** previous_available_block_previous = reinterpret_cast<void**>(block_space_size_power_previous + 1);
         void** next_available_block_previous = reinterpret_cast<void**>(previous_available_block_previous + 1);
@@ -393,7 +401,7 @@ void allocator_buddies_system::deallocate(void *at)
 
     if (next_target_block != nullptr)
     {
-        bool* is_busy_space_block_next = reinterpret_cast<bool *>(next_target_block);
+        unsigned char* is_busy_space_block_next = reinterpret_cast<unsigned char*>(next_target_block);
         short* block_space_size_power_next = reinterpret_cast<short *>(is_busy_space_block_next + 1);
         void** previous_available_block_next = reinterpret_cast<void**>(block_space_size_power_next + 1);
 
@@ -402,7 +410,7 @@ void allocator_buddies_system::deallocate(void *at)
 
     auto buddies_address = get_buddy(target_block);
 
-    while (buddies_address != nullptr && check_free_block(buddies_address) &&
+    while (buddies_address != nullptr && is_free_block(buddies_address) &&
         get_power_of_block_size(buddies_address) == target_block_size)
     {
         if (buddies_address < target_block)
@@ -412,7 +420,7 @@ void allocator_buddies_system::deallocate(void *at)
             target_block = temp;
         }
 
-        bool* is_busy_space_block_target = reinterpret_cast<bool *>(target_block);
+        unsigned char* is_busy_space_block_target = reinterpret_cast<unsigned char*>(target_block);
         short* block_space_size_power_target = reinterpret_cast<short *>(is_busy_space_block_target + 1);
         void** previous_available_block_target = reinterpret_cast<void**>(block_space_size_power_target + 1);
         void** next_available_block_target = reinterpret_cast<void**>(previous_available_block_target + 1);
@@ -425,16 +433,14 @@ void allocator_buddies_system::deallocate(void *at)
 
         if (next_block_buddie != nullptr)
         {
-            bool* is_busy_space_block_buddie = reinterpret_cast<bool *>(next_block_buddie);
-            short* block_space_size_power_buddie = reinterpret_cast<short *>(is_busy_space_block_buddie + 1);
+            unsigned char* is_busy_space_block_buddie = reinterpret_cast<unsigned char*>(next_block_buddie);
+            short* block_space_size_power_buddie = reinterpret_cast<short*>(is_busy_space_block_buddie + 1);
             void** previous_available_block_buddie = reinterpret_cast<void**>(block_space_size_power_buddie + 1);
 
             *previous_available_block_buddie = target_block;
         }
-
         buddies_address = get_buddy(target_block);
     }
-
 
     if (log != nullptr)
     {
@@ -471,7 +477,7 @@ std::vector<allocator_test_utils::block_info> allocator_buddies_system::get_bloc
 
     std::vector<allocator_test_utils::block_info> data_vector_block_info;
 
-    void** l_current_block = reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(_trusted_memory) + sizeof(allocator*) + sizeof(logger*) + sizeof(size_t) + sizeof(allocator_with_fit_mode::fit_mode) + sizeof(std::mutex*));
+    void** l_current_block = reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(_trusted_memory) + sizeof(allocator*) + sizeof(logger*) + sizeof(size_t) + sizeof(allocator_with_fit_mode::fit_mode) + sizeof(std::mutex*) + sizeof(size_t));
     void* current_block = *l_current_block;
     size_t current_size = 0;
     size_t size_trusted_memory = 1 << *reinterpret_cast<size_t*>(reinterpret_cast<unsigned char*>(_trusted_memory) + sizeof(allocator*) + sizeof(logger*));
@@ -482,11 +488,11 @@ std::vector<allocator_test_utils::block_info> allocator_buddies_system::get_bloc
     {
         allocator_test_utils::block_info blocks_info;
 
-        blocks_info.is_block_occupied = *reinterpret_cast<bool*>(current_block);
+        blocks_info.is_block_occupied = *reinterpret_cast<unsigned char*>(current_block);
 
-        std::cout << std::to_string(*reinterpret_cast<short*>(reinterpret_cast<bool*>(current_block) + 1)) << std::endl;
-        blocks_info.block_size =  1 << (*reinterpret_cast<short*>(reinterpret_cast<bool*>(current_block) + 1));
-        std::cout << std::to_string(blocks_info.block_size) << std::endl;
+//        std::cout << std::to_string(*reinterpret_cast<short*>(reinterpret_cast<unsigned char*>(current_block) + 1)) << std::endl;
+        blocks_info.block_size =  1 << (*reinterpret_cast<short*>(reinterpret_cast<unsigned char*>(current_block) + 1));
+//        std::cout << std::to_string(blocks_info.block_size) << std::endl;
         data_vector_block_info.push_back(blocks_info);
         current_block = get_next_block(current_block);
 
@@ -552,6 +558,7 @@ allocator_buddies_system::~allocator_buddies_system()
 
     if (logger != nullptr)
     {
+        std::cout << "I DO THIS!!!!!!!!!!!!!!!" << std::endl;
         logger->trace("ALLOCATOR_BUDDIES_SYSTEM: destructor has finished working, allocator is deleted\n");
     }
 }
