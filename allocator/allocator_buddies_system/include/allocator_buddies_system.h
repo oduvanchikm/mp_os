@@ -73,12 +73,6 @@ private:
 
 private:
 
-    size_t closest_power_of_two(size_t number) const;
-
-    size_t get_power_for_size_block(size_t block_size) const;
-
-private:
-
     void* get_buddy(void* target_block_first_buddy) noexcept;
 
     void* get_start_allocated_memory_address() noexcept;
@@ -108,6 +102,8 @@ private:
     void* get_next_available_block(void* address_block);
 
     short get_power_of_two(size_t number);
+
+
 
 };
 
