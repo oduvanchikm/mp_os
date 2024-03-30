@@ -11,11 +11,11 @@
 #include <sstream>
 
 class allocator_buddies_system final:
-    private allocator_guardant,
-    public allocator_test_utils,
-    public allocator_with_fit_mode,
-    private logger_guardant,
-    private typename_holder
+        private allocator_guardant,
+        public allocator_test_utils,
+        public allocator_with_fit_mode,
+        private logger_guardant,
+        private typename_holder
 {
 
 private:
@@ -27,33 +27,33 @@ public:
     ~allocator_buddies_system() override;
 
     allocator_buddies_system(
-        allocator_buddies_system const &other) = delete;
+            allocator_buddies_system const &other) = delete;
 
     allocator_buddies_system &operator=(
-        allocator_buddies_system const &other) = delete;
+            allocator_buddies_system const &other) = delete;
 
     allocator_buddies_system(
-        allocator_buddies_system &&other) noexcept = delete;
+            allocator_buddies_system &&other) noexcept = delete;
 
     allocator_buddies_system &operator=(
-        allocator_buddies_system &&other) noexcept = delete;
+            allocator_buddies_system &&other) noexcept = delete;
 
 public:
 
     explicit allocator_buddies_system(
-        size_t space_size_power_of_two,
-        allocator *parent_allocator = nullptr,
-        logger *logger = nullptr,
-        allocator_with_fit_mode::fit_mode allocate_fit_mode = allocator_with_fit_mode::fit_mode::first_fit);
+            size_t space_size_power_of_two,
+            allocator *parent_allocator = nullptr,
+            logger *logger = nullptr,
+            allocator_with_fit_mode::fit_mode allocate_fit_mode = allocator_with_fit_mode::fit_mode::first_fit);
 
 public:
 
     [[nodiscard]] void *allocate(
-        size_t value_size,
-        size_t values_count) override;
+            size_t value_size,
+            size_t values_count) override;
 
     void deallocate(
-        void *at) override;
+            void *at) override;
 
 public:
 
@@ -95,9 +95,11 @@ private:
 
     void* get_next_block(void* block_address) const noexcept;
 
+    size_t get_aviable_block_size() const;
+
     std::string get_block_of_memory_state(void *at) const;
 
-    void* get_next_available_block(void* address_block);
+    void* get_next_available_block(void* address_block) const;
 
     short get_power_of_two(size_t number);
 

@@ -14,7 +14,8 @@ FetchContent_MakeAvailable(
 
 add_executable(
         mp_os_allctr_allctr_bdds_sstm_tests
-        allocator_buddies_system_tests.cpp)
+        allocator_buddies_system_tests.cpp
+        ../src/allocator_buddies_system.cpp)
 target_link_libraries(
         mp_os_allctr_allctr_bdds_sstm_tests
         PRIVATE
