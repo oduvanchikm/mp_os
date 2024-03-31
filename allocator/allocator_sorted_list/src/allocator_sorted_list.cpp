@@ -1,5 +1,4 @@
 #include <not_implemented.h>
-
 #include "../include/allocator_sorted_list.h"
 
 allocator_sorted_list::~allocator_sorted_list()
@@ -18,7 +17,7 @@ allocator_sorted_list::~allocator_sorted_list()
 
     if (logger != nullptr)
     {
-        logger->trace("allocator is deleted");
+        logger->trace(get_typename() + "allocator is deleted");
     }
 }
 
@@ -26,7 +25,6 @@ size_t allocator_sorted_list::get_ancillary_space_size() const noexcept
 {
     return sizeof(logger*) + sizeof(allocator*) + sizeof(size_t) + sizeof(void*) + sizeof(allocator_with_fit_mode::fit_mode) + sizeof(std::mutex*);
 }
-
 
 std::mutex* allocator_sorted_list::get_mutex() const noexcept
 {
@@ -45,18 +43,18 @@ void *allocator_sorted_list::get_first_aviable_block() const noexcept
 
 allocator::block_size_t allocator_sorted_list::get_aviable_block_size(void *block_address) const noexcept
 {
-    return *reinterpret_cast<size_t *>(block_address);
+    return *reinterpret_cast<size_t *>(reinterpret_cast<void **>(block_address) + 1);
 }
 
 void *allocator_sorted_list::get_aviable_block_next_block_address(void *block_address) noexcept
 {
-    return *reinterpret_cast<void**>(reinterpret_cast<size_t *>(block_address) + 1);
+    return *reinterpret_cast<void**>(block_address);
 }
 
-allocator::block_size_t allocator_sorted_list::get_occupied_block_size(void *block_address) noexcept
-{
-    return *reinterpret_cast<allocator::block_size_t *>(block_address);
-}
+//allocator::block_size_t allocator_sorted_list::get_occupied_block_size(void *block_address) noexcept
+//{
+//    return *reinterpret_cast<allocator::block_size_t *>(block_address);
+//}
 
 inline allocator *allocator_sorted_list::get_allocator() const
 {
@@ -69,34 +67,22 @@ allocator_sorted_list::allocator_sorted_list(
     logger *logger,
     allocator_with_fit_mode::fit_mode allocate_fit_mode)
 {
-
-    std::cout << "che za bred" << std::endl;
-//    class logger* log = get_logger();
-
-    std::cout << "WHERE???????????" << std::endl;
-
-
-
     if (logger != nullptr)
     {
-        logger->trace("ALLOCATOR_SORTED_LIST: the beginning of the constructor's work, allocator start creating");
-        std::cout << "ALLOCATOR_SORTED_LIST: the beginning of the constructor's work, allocator start creating" << std::endl;
+        logger->trace(get_typename() + "the beginning of the constructor's work, allocator start creating");
+        std::cout << get_typename() + "the beginning of the constructor's work, allocator start creating" << std::endl;
     }
-
-//    std::cout << "hello!" << std::endl;
 
     if (space_size < sizeof(block_size_t) + sizeof(block_pointer_t))
     {
         if (logger != nullptr)
         {
-            logger->error("ALLOCATOR_SORTED_LIST: can't initialize allocator instance");
+            logger->error(get_typename() + "can't initialize allocator instance");
         }
-        throw std::logic_error("ALLOCATOR_SORTED_LIST: can't initialize allocator instance");
+        throw std::logic_error(get_typename() + "can't initialize allocator instance");
     }
 
     auto common_size = space_size + get_ancillary_space_size();
-
-    std::cout << "common size: " << common_size << std::endl;
 
     try
     {
@@ -106,22 +92,19 @@ allocator_sorted_list::allocator_sorted_list(
     }
     catch (std::bad_alloc const &ex)
     {
-        logger->error("ALLOCATOR_SORTED_LIST: error with allocate memory");
+        logger->error(get_typename() + "error with allocate memory");
     }
 
-    allocator** parent_allocator_space_address = reinterpret_cast<allocator **>(_trusted_memory);
+    allocator **parent_allocator_space_address = reinterpret_cast<allocator **>(_trusted_memory);
     *parent_allocator_space_address = parent_allocator;
 
-    class logger** logger_space_address = reinterpret_cast<class logger**>(parent_allocator_space_address + 1);
+    class logger **logger_space_address = reinterpret_cast<class logger **>(parent_allocator_space_address + 1);
     *logger_space_address = logger;
 
     size_t *space_size_space_address = reinterpret_cast<size_t *>(logger_space_address + 1);
     *space_size_space_address = space_size;
 
-    size_t *size_memory = reinterpret_cast<size_t *>(space_size_space_address + 1);
-    *size_memory = space_size;
-
-    allocator_with_fit_mode::fit_mode *fit_mode_space_address = reinterpret_cast<allocator_with_fit_mode::fit_mode *>(size_memory + 1);
+    allocator_with_fit_mode::fit_mode *fit_mode_space_address = reinterpret_cast<allocator_with_fit_mode::fit_mode *>(space_size_space_address + 1);
     *fit_mode_space_address = allocate_fit_mode;
 
     std::mutex** mutex_space_address = reinterpret_cast<std::mutex**>(fit_mode_space_address + 1);
@@ -131,51 +114,26 @@ allocator_sorted_list::allocator_sorted_list(
     void **first_block_address_space_address = reinterpret_cast<void **>(mutex_space_address + 1);
     *first_block_address_space_address = reinterpret_cast<void *>(first_block_address_space_address + 1);
 
-    *reinterpret_cast<size_t *>(*first_block_address_space_address) = space_size - sizeof(size_t) - sizeof(void*);
-    *reinterpret_cast<void** >(reinterpret_cast<size_t *>(*first_block_address_space_address) + 1) = nullptr;
+    *reinterpret_cast<void **>(*first_block_address_space_address) = nullptr;
+
+    *reinterpret_cast<size_t *>(reinterpret_cast<void **>(*first_block_address_space_address) + 1) = space_size - sizeof(void*) - sizeof(size_t);
 
     if (logger != nullptr)
     {
-        logger->trace("ALLOCATOR_SORTED_LIST: allocator is created")
-        ->information("ALLOCATOR_SORTED_LIST: size of memory allocated: " + std::to_string(space_size));
-        std::cout << "ALLOCATOR_SORTED_LIST: allocator has created" << std::endl;
+        logger->trace(get_typename() + "allocator is created")
+        ->information(get_typename() + "size of memory allocated: " + std::to_string(space_size));
+        std::cout << get_typename() + "allocator has created" << std::endl;
     }
 }
-
-//size_t allocator_sorted_list::get_available_block_size(void* block_address) const noexcept
-//{
-//    if (block_address == nullptr)
-//    {
-//        std::cout << "nullptr" << std::endl;
-//    }
-//    return *reinterpret_cast<size_t*>(block_address);
-//}
-
-//void* allocator_sorted_list::get_available_block_next_block_address(void* block_address) noexcept
-//{
-//    return *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(block_address) + 1);
-//}
-//
-//allocator::block_size_t allocator_sorted_list::get_occupied_block_size(void* block_address) noexcept
-//{
-//    return *reinterpret_cast<allocator::block_size_t*>(block_address);
-//}
-
-//void* allocator_sorted_list::get_first_available_block() const noexcept
-//{
-//    return *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(_trusted_memory) + sizeof(allocator*) + sizeof(logger*) + sizeof(size_t) + sizeof(allocator_with_fit_mode::fit_mode) + sizeof(std::mutex*));
-//}
 
 [[nodiscard]] void *allocator_sorted_list::allocate(size_t value_size, size_t values_count)
 {
     logger* log = get_logger();
 
-    std::cout << "he" << std::endl;
-
     if (log != nullptr)
     {
-//        log->trace("ALLOCATOR_SORTED_LIST: method allocate has started");
-        std::cout << "ALLOCATOR_SORTED_LIST: method allocate has started" << std::endl;
+        log->trace(get_typename() + "method allocate has started");
+        std::cout << get_typename() + "method allocate has started" << std::endl;
     }
 
     auto requested_size = values_count * value_size;
@@ -185,7 +143,7 @@ allocator_sorted_list::allocator_sorted_list(
     if (requested_size < sizeof(block_size_t) + sizeof(block_pointer_t))
     {
         requested_size = sizeof(block_size_t) + sizeof(block_pointer_t);
-        warning_with_guard("ALLOCATOR_SORTED_LIST: request space size was changed");
+        warning_with_guard(get_typename() + "request space size was changed");
     }
 
     allocator_with_fit_mode::fit_mode fit_mode = get_fit_mode();
@@ -202,8 +160,6 @@ allocator_sorted_list::allocator_sorted_list(
         {
             size_t current_block_size = get_aviable_block_size(current_block);
 
-//            std::cout << "current block size: " << current_block_size << std::endl;
-
             if (current_block_size >= requested_size &&
                 fit_mode == allocator_with_fit_mode::fit_mode::first_fit ||
                 fit_mode == allocator_with_fit_mode::fit_mode::the_best_fit &&
@@ -213,31 +169,25 @@ allocator_sorted_list::allocator_sorted_list(
                 (target_block == nullptr ||
                         get_aviable_block_size(target_block) < current_block_size))
             {
-                std::cout << "good" << std::endl;
                 previous_to_target_block = previous_block;
                 target_block = current_block;
                 next_to_target_block = get_aviable_block_next_block_address(current_block);
             }
-
-            std::cout << "wtf" << std::endl;
-
             previous_block = current_block;
             current_block = get_aviable_block_next_block_address(current_block);
         }
     }
 
-    std::cout << ":):):):):))" << std::endl;
-
     if (target_block == nullptr)
     {
-        std::cout << "ALLOCATOR_SORTED_LIST: can't allocate" << std::endl;
-        error_with_guard("ALLOCATOR_SORTED_LIST: can't allocate");
+        std::cout << get_typename() + "can't allocate" << std::endl;
+        error_with_guard(get_typename() + "can't allocate");
         throw std::bad_alloc();
     }
 
     size_t size_available_block = get_aviable_block_size(target_block);
 
-    std::cout << "size of target block: " << size_available_block << std::endl;
+//    std::cout << "size of target block: " << size_available_block << std::endl;
 
     if (previous_to_target_block == nullptr)
     {
@@ -282,8 +232,8 @@ std::vector<allocator_test_utils::block_info> allocator_sorted_list::get_blocks_
     logger* log = get_logger();
     if (log != nullptr)
     {
-        log->debug("ALLOCATOR_BUDDIES_SYSTEM: method get block info has started");
-        std::cout << "ALLOCATOR_BUDDIES_SYSTEM: method get block info has started" << std::endl;
+        log->debug(get_typename() + "method get block info has started");
+        std::cout << get_typename() + "method get block info has started" << std::endl;
     }
 
     std::vector<allocator_test_utils::block_info> data_vector_block_info;
@@ -318,12 +268,12 @@ std::vector<allocator_test_utils::block_info> allocator_sorted_list::get_blocks_
         data_str += (is_oc + "  " + std::to_string(value.block_size) + " | ");
     }
 
-    log_with_guard("ALLOCATOR_BUDDIES_SYSTEM: state blocks: " + data_str, logger::severity::debug);
-    std::cout << "ALLOCATOR_BUDDIES_SYSTEM: state block " << data_str << std::endl;
+    log_with_guard(get_typename() + "state blocks: " + data_str, logger::severity::debug);
+    std::cout << get_typename() + "state block " << data_str << std::endl;
 
     if (log != nullptr)
     {
-        log->debug("ALLOCATOR_BUDDIES_SYSTEM: method get block info has finished");
+        log->debug(get_typename() + "method get block info has finished");
     }
 
     return data_vector_block_info;
@@ -336,5 +286,7 @@ inline logger *allocator_sorted_list::get_logger() const
 
 inline std::string allocator_sorted_list::get_typename() const noexcept
 {
-    throw not_implemented("inline std::string allocator_sorted_list::get_typename() const noexcept", "your code should be here...");
+    std::string typename_of_allocator = "ALLOCATOR_SORTED_LIST: ";
+
+    return typename_of_allocator;
 }
