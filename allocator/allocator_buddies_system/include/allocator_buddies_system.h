@@ -2,6 +2,7 @@
 #define MATH_PRACTICE_AND_OPERATING_SYSTEMS_ALLOCATOR_ALLOCATOR_BUDDIES_SYSTEM_H
 
 #include <allocator_guardant.h>
+#include "../../../logger/client_logger/include/client_logger.h"
 #include <allocator_test_utils.h>
 #include <allocator_with_fit_mode.h>
 #include <logger_guardant.h>
@@ -91,7 +92,7 @@ private:
 
     void* get_first_available_block() const noexcept;
 
-    size_t get_power_of_block_size(void* available_block_address) const;
+    short get_power_of_block_size(void* available_block_address) const;
 
     void* get_next_block(void* block_address) const noexcept;
 
