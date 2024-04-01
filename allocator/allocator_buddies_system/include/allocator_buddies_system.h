@@ -10,6 +10,7 @@
 #include <cmath>
 #include <mutex>
 #include <sstream>
+#include <thread>
 
 class allocator_buddies_system final:
         private allocator_guardant,
@@ -102,11 +103,13 @@ private:
 
     void* get_next_available_block(void* address_block) const;
 
-    short get_power_of_two(size_t number);
+    short get_power_of_two_up(size_t number);
+
+    short get_power_of_two_down(size_t number);
 
     size_t* get_free_size() const noexcept;
 
-
+    size_t get_meta_block() const;
 
 };
 
