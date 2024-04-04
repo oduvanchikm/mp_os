@@ -40,6 +40,38 @@ client_logger::client_logger(std::map<std::string, std::set<severity>> const &bu
     }
 }
 
+client_logger::client_logger(client_logger const &other) :
+    _format_log_string(other._format_log_string), _all_streams(other._all_streams)
+{
+
+}
+
+client_logger &client_logger::operator=(client_logger const &other)
+{
+    if (this != &other)
+    {
+        _format_log_string = other._format_log_string;
+        _all_streams = other._all_streams;
+    }
+    return *this;
+}
+
+client_logger::client_logger(client_logger &&other) noexcept :
+    _format_log_string(std::move(other._format_log_string)), _all_streams(std::move(other._all_streams))
+{
+
+}
+
+client_logger &client_logger::operator=(client_logger &&other) noexcept
+{
+    if (this != &other)
+    {
+        _format_log_string = std::move(other._format_log_string);
+        _all_streams = std::move(other._all_streams);
+    }
+    return *this;
+}
+
 client_logger::~client_logger() noexcept
 {
     for (auto &stream : _all_streams)

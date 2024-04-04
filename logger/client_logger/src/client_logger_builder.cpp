@@ -34,12 +34,12 @@ logger_builder* client_logger_builder::transform_with_configuration(
 
     if (!(file.is_open()))
     {
-        throw std::runtime_error("can't open file\n");
+        throw std::runtime_error("can't open file");
     }
 
     if (file.peek() == EOF)
     {
-        throw std::runtime_error("file is empty!!!\n");
+        throw std::runtime_error("file is empty!!!");
     }
 
     auto info_json = nlohmann::json::parse(file);
