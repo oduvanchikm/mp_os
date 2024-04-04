@@ -35,10 +35,10 @@ public:
             allocator_buddies_system const &other) = delete;
 
     allocator_buddies_system(
-            allocator_buddies_system &&other) noexcept = delete;
+            allocator_buddies_system &&other) noexcept;
 
     allocator_buddies_system &operator=(
-            allocator_buddies_system &&other) noexcept = delete;
+            allocator_buddies_system &&other) noexcept;
 
 public:
 
