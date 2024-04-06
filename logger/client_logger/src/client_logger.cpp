@@ -95,8 +95,6 @@ client_logger::~client_logger() noexcept
     }
 }
 
-#if defined(CLIENT_LOGGER)
-
 logger const *client_logger::log(const std::string &text, logger::severity severity) const noexcept
 {
     auto string_severity = severity_to_string(severity);
@@ -165,82 +163,5 @@ logger const *client_logger::log(const std::string &text, logger::severity sever
     return this;
 }
 
-#elif defined(SENDING_TO_SERVER_UNIX)
-
-logger const *client_logger::log(const std::string &text, logger::severity severity) const noexcept
-{
-    mqd_t mq;
-    struct mq_attr attr;
-    attr.mq_flags = 0;
-    attr.mq_maxmsg = 10;
-    attr.mq_msgsize = 10;
-    attr.mq_curmsgs = 0;
-
-    // Создаем очередь с именем "/my_queue". O_CREAT: очередь должна быть создана
-    // O_WRONLY: очередь будет открыта только для записи
-
-    mq = mq_open("/my_queue", O_CREAT | O_WRONLY, 0644, &attr);
-    if (mq == (mqd_t) - 1)
-    {
-        perror("mq_open");
-        exit(1);
-    }
-
-    int count = 0; // подсчета количества сообщений
-    std::vector<message> messages; // для хранения всех сообщений
-
-    for (auto &stream : _all_streams)
-    {
-        if (stream.second.second.find(severity) != stream.second.second.end())
-        {
-            message msg;
-            int size = text.size();
-
-            if (stream.second.first == nullptr) // если в консоль
-            {
-                msg.file_path = "console";
-            }
-            else
-            {
-                msg.file_path = stream.first;
-            }
-
-            msg.severity = severity;
-            msg.text = text;
-            msg.size_of_message = size;
-
-            messages.push_back(msg); // Добавляем сообщение в вектор
-            count++; // Увеличиваем счетчик сообщений
-
-
-//            std::cout << "Sending message:" << std::endl;
-//            std::cout << "File path: " << msg.file_path << std::endl;
-//            std::cout << "Severity: " << static_cast<int>(msg.severity) << std::endl;
-//            std::cout << "Text: " << msg.text << std::endl;
-//            std::cout << "Size of message: " << msg.size_of_message << std::endl;
-//            std::cout << "---------------------" << std::endl;
-        }
-    }
-
-    // отправляем все сообщения из вектора в очередь одним вызовом
-    if (mq_send(mq, reinterpret_cast<const char*>(messages.data()), messages.size() * sizeof(message), 0) == -1)
-    {
-        perror("mq_send");
-        exit(1);
-    }
-
-//    std::cout << "message go to the window" << std::endl;
-
-    mq_close(mq);
-    return this;
-}
-
-
-
-
-
-#else
-
-#endif
 
 

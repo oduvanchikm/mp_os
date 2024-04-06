@@ -12,9 +12,7 @@
 #include <sstream>
 #include <mqueue.h>
 #include <cstring>
-#define CLIENT_LOGGER
-//#define SENDING_TO_SERVER_UNIX
-#define SENDING_TO_SERVER_WINDOWS
+
 
 
 class client_logger final:
@@ -51,18 +49,6 @@ public:
 
     [[nodiscard]] logger const *log(
             const std::string &message, logger::severity severity) const noexcept override;
-
-public:
-
-    struct message
-    {
-        int count_of_messages;
-        int size_of_message;
-        std::string text;
-        std::string file_path;
-        logger::severity severity;
-    };
-
 };
 
 #endif //MATH_PRACTICE_AND_OPERATING_SYSTEMS_CLIENT_LOGGER_H

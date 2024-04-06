@@ -9,6 +9,7 @@
 #include <typename_holder.h>
 #include <mutex>
 #include <sstream>
+#include <thread>
 
 class allocator_sorted_list final:
     private allocator_guardant,
@@ -30,9 +31,9 @@ public:
 
     allocator_sorted_list &operator=(allocator_sorted_list const &other) = delete;
 
-    allocator_sorted_list(allocator_sorted_list &&other) noexcept = delete;
+    allocator_sorted_list(allocator_sorted_list &&other) noexcept;
 
-    allocator_sorted_list &operator=(allocator_sorted_list &&other) noexcept = delete;
+    allocator_sorted_list &operator=(allocator_sorted_list &&other) noexcept;
 
 public:
 
@@ -108,6 +109,14 @@ private:
 private:
 
     inline std::string get_typename() const noexcept override;
+
+    size_t* get_available_size_for_allocator() const noexcept;
+
+    size_t get_small_metadata() const noexcept;
+
+    void print_info_about_available_blocks();
+
+    bool is_block_occupied(void* block) const noexcept;
 
 };
 

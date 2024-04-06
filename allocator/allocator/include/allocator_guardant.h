@@ -21,7 +21,7 @@ public:
 
 public:
 
-    [[nodiscard]] inline virtual allocator *get_allocator() const = 0;
+    [[nodiscard]] inline virtual allocator *get_allocator() const = 0; //
 
 };
 

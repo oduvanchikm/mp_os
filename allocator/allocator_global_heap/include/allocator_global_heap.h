@@ -63,10 +63,6 @@ private:
 
     std::string get_block_of_memory_state(void *at) const;
 
-public:
-
-
-
 };
 
 #endif //MATH_PRACTICE_AND_OPERATING_SYSTEMS_ALLOCATOR_ALLOCATOR_GLOBAL_HEAP_H
