@@ -34,3 +34,6 @@ set_target_properties(
         CXX_EXTENSIONS OFF
         VERSION 1.0
         DESCRIPTION "server logger implementation library")
+
+target_compile_options(mp_os_lggr_srvr_lggr PUBLIC -pthread)
+target_link_options(mp_os_lggr_srvr_lggr PUBLIC -pthread)

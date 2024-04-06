@@ -1,23 +1,16 @@
 #ifndef MATH_PRACTICE_AND_OPERATING_SYSTEMS_SERVER_LOGGER_H
 #define MATH_PRACTICE_AND_OPERATING_SYSTEMS_SERVER_LOGGER_H
-
 #include "../../logger/include/logger.h"
 #include "server_logger_builder.h"
 #include <map>
-#include <vector>
 #include <string>
 #include <iostream>
-#include <cstdlib>
-#include <cstring>
-#include <fcntl.h>
-#include <sys/stat.h>
 #include <fstream>
 #include <set>
-#include <iostream>
 #include <sstream>
 #include <mqueue.h>
 #include <cstring>
-#include <set>
+#include <unistd.h>
 
 #define _LINUX_
 //#define _WINDOWS_
@@ -33,7 +26,7 @@ private:
 
     static std::map<std::string, std::pair<mqd_t, int>> _queue;
 
-#elif _WIN
+#elif _WINDOWS_
 
     std::map<std::string, std::pair<...., std::set<logger::severity>>> _queues_streams; // for windows
 
