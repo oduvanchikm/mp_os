@@ -7,15 +7,23 @@ class allocator
 {
 
 public:
+<<<<<<< HEAD
 
     typedef size_t block_size_t; // размер блока
     typedef void *block_pointer_t; // указатель на блок памяти
+=======
+    
+    typedef size_t block_size_t;
+    
+    typedef void *block_pointer_t;
+>>>>>>> 5ade9435e0702eaa7d8713a809c05debdb627456
 
 public:
-
+    
     virtual ~allocator() noexcept = default;
 
 public:
+<<<<<<< HEAD
 //    методы для операции вызова конструктора объекта, который находится на уровне блока памяти
 
     template<typename T, typename ...args>
@@ -32,16 +40,47 @@ public:
     //   освободить память
     virtual void deallocate(void *at) = 0;
 
+=======
+    
+    template<
+        typename T,
+        typename ...args>
+    inline static void construct(
+        T *at,
+        args... constructor_arguments);
+    
+    template<
+        typename T>
+    inline static void destruct(
+        T *at);
+
+public:
+    
+    [[nodiscard]] virtual void *allocate(
+        size_t value_size,
+        size_t values_count) = 0;
+    
+    virtual void deallocate(
+        void *at) = 0;
+    
+>>>>>>> 5ade9435e0702eaa7d8713a809c05debdb627456
 };
 
 template<typename T, typename ...args>
 inline void allocator::construct( T *at, args... constructor_arguments)
 {
-    new (at) T(constructor_arguments...);
+    new(at) T(constructor_arguments...);
 }
 
+<<<<<<< HEAD
 template<typename T>
 inline void allocator::destruct(T* at)
+=======
+template<
+    typename T>
+inline void allocator::destruct(
+    T *at)
+>>>>>>> 5ade9435e0702eaa7d8713a809c05debdb627456
 {
     at->~T();
 }
