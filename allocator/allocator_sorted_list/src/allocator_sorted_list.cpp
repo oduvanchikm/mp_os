@@ -79,7 +79,7 @@ void *allocator_sorted_list::get_first_aviable_block() const noexcept
     return *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(_trusted_memory) + sizeof(allocator *) + sizeof(logger *) + sizeof(size_t) + sizeof(allocator_with_fit_mode::fit_mode) + sizeof(std::mutex*) + sizeof(size_t));
 }
 
-allocator::block_size_t allocator_sorted_list::get_aviable_block_size(void *block_address) const noexcept
+size_t allocator_sorted_list::get_aviable_block_size(void *block_address) const noexcept
 {
     return *reinterpret_cast<size_t*>(reinterpret_cast<unsigned char*>(block_address) + sizeof(void*));
 }
@@ -160,11 +160,6 @@ allocator_sorted_list::allocator_sorted_list(
     }
 }
 
-size_t* allocator_sorted_list::get_available_size_for_allocator() const noexcept
-{
-    return reinterpret_cast<size_t*>(reinterpret_cast<unsigned char*>(_trusted_memory) + sizeof(allocator*) + sizeof(logger*) + sizeof(size_t) + sizeof(allocator_with_fit_mode::fit_mode) + sizeof(std::mutex*) + sizeof(void*));
-}
-
 [[nodiscard]] void *allocator_sorted_list::allocate(size_t value_size, size_t values_count)
 {
     logger* log = get_logger();
@@ -174,7 +169,6 @@ size_t* allocator_sorted_list::get_available_size_for_allocator() const noexcept
     if (log != nullptr)
     {
         log->trace(get_typename() + "method allocate has started");
-        std::cout << get_typename() + "method allocate has started" << std::endl;
     }
 
     auto requested_size = values_count * value_size;
@@ -196,7 +190,11 @@ size_t* allocator_sorted_list::get_available_size_for_allocator() const noexcept
 
         while (current_block != nullptr)
         {
-            size_t current_block_size = get_aviable_block_size(current_block);
+//            size_t current_block_size = get_aviable_block_size(current_block);
+
+            size_t current_block_size = *reinterpret_cast<size_t*>(reinterpret_cast<unsigned char*>(current_block) + sizeof(void*));
+
+            std::cout << "block size " << current_block_size << std::endl;
 
             if (current_block_size >= requested_size &&
                 fit_mode == allocator_with_fit_mode::fit_mode::first_fit ||
@@ -224,7 +222,6 @@ size_t* allocator_sorted_list::get_available_size_for_allocator() const noexcept
 
     if (target_block == nullptr)
     {
-        std::cout << get_typename() + "can't allocate" << std::endl;
         error_with_guard(get_typename() + "can't allocate");
         throw std::bad_alloc();
     }
@@ -232,11 +229,11 @@ size_t* allocator_sorted_list::get_available_size_for_allocator() const noexcept
     if (previous_to_target_block == nullptr)
     {
         size_t blocks_sizes_difference = get_aviable_block_size(target_block) - requested_size;
+        void* next_available_block = get_aviable_block_next_block_address(target_block);
 
         if (blocks_sizes_difference > 0 && blocks_sizes_difference <  get_small_metadata())
         {
             requested_size = get_aviable_block_size(target_block);
-            void* next_available_block = get_aviable_block_next_block_address(target_block);
 
             void** first_available_block = reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(_trusted_memory) + sizeof(allocator*) + sizeof(logger*) + sizeof(size_t) + sizeof(allocator_with_fit_mode::fit_mode) + sizeof(std::mutex*) + sizeof(size_t));
             *first_available_block = next_available_block;
@@ -253,6 +250,8 @@ size_t* allocator_sorted_list::get_available_size_for_allocator() const noexcept
             void** first_available_block = reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(_trusted_memory) + sizeof(allocator*) + sizeof(logger*) + sizeof(size_t) + sizeof(allocator_with_fit_mode::fit_mode) + sizeof(std::mutex*) + sizeof(size_t));
             *first_available_block = new_available_block;
         }
+
+        next_available_block = _trusted_memory;
     }
     else
     {
@@ -276,19 +275,23 @@ size_t* allocator_sorted_list::get_available_size_for_allocator() const noexcept
             void** new_next_for_previous_available_block = reinterpret_cast<void **>(previous_to_target_block);
             *new_next_for_previous_available_block = new_next_after_target_available_block;
         }
+
+        next_available_block = _trusted_memory;
     }
 
-    // TODO: write status for free blocks
+    size_t size_before = *reinterpret_cast<size_t*>(reinterpret_cast<unsigned char *>(_trusted_memory) + sizeof(allocator *) + sizeof(logger *));
+    size_t* size_space = reinterpret_cast<size_t*>(reinterpret_cast<unsigned char *>(_trusted_memory) + sizeof(allocator *) + sizeof(logger *));
+
+    *size_space = size_before - requested_size - sizeof(size_t) - sizeof(void*);
 
     get_blocks_info();
-
-    // TODO: write a status of all blocks
 
     if (log != nullptr)
     {
         log->trace(get_typename() + "method allocate has finished");
         std::cout << get_typename() + "method allocate has finished" << std::endl;
     }
+
     return reinterpret_cast<unsigned char*>(target_block) + get_small_metadata();
 }
 
@@ -410,7 +413,6 @@ inline void allocator_sorted_list::set_fit_mode(allocator_with_fit_mode::fit_mod
     {
         log->trace(get_typename() + "set fit mode method has started")
         ->debug(get_typename() + "mutex has locked");
-        std::cout << get_typename() + "set fit mode method has started" << std::endl;
     }
 
     *reinterpret_cast<allocator_with_fit_mode::fit_mode*>(reinterpret_cast<unsigned char*>(_trusted_memory) + sizeof(allocator*) + sizeof(logger*) + sizeof(size_t)) = mode;
@@ -419,47 +421,64 @@ inline void allocator_sorted_list::set_fit_mode(allocator_with_fit_mode::fit_mod
     {
         log->trace(get_typename() + "set fit mode method has finished")
                 ->debug(get_typename() + "mutex has unlocked");
-        std::cout << get_typename() + "set fit mode method has finished" << std::endl;
     }
 }
 
 bool allocator_sorted_list::is_block_occupied(void* block) const noexcept
 {
-
+    return (block == _trusted_memory);
 }
 
 std::vector<allocator_test_utils::block_info> allocator_sorted_list::get_blocks_info() const noexcept
 {
-    std::cout << "hello" << std::endl;
     logger* log = get_logger();
-    std::cout << "hello" << std::endl;
+
+    trace_with_guard(get_typename() + "method get blocks info has started");
 
     std::vector<allocator_test_utils::block_info> blocks_info;
 
     void** l_current_block = reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(_trusted_memory) + sizeof(allocator*) + sizeof(logger*) + sizeof(size_t) + sizeof(allocator_with_fit_mode::fit_mode) + sizeof(std::mutex*) + sizeof(size_t));
-    void* current_block = reinterpret_cast<void*>(l_current_block + 1);
+    void* current_block = reinterpret_cast<void**>(l_current_block + 1);
 
     int block_number = 0;
+    size_t current_size = 0;
+    size_t size_trusted_memory = *reinterpret_cast<size_t*>(reinterpret_cast<unsigned char*>(_trusted_memory) + sizeof(allocator*) + sizeof(logger*) + sizeof(size_t) + sizeof(allocator_with_fit_mode::fit_mode) + sizeof(std::mutex*));
 
-    while (current_block != nullptr)
+    while(current_size < size_trusted_memory)
     {
         allocator_test_utils::block_info value;
 
         ++block_number;
 
         value.block_size = *reinterpret_cast<size_t*>(reinterpret_cast<unsigned char*>(current_block) + 1);
-//        value.is_block_occupied = is_block_occupied(current_block);
+
+        void* memory = *reinterpret_cast<void**>(current_block);
+
+        value.is_block_occupied = is_block_occupied(memory);
 
         blocks_info.push_back(std::move(value));
 
-        current_block = reinterpret_cast<void*>(reinterpret_cast<unsigned char*>(current_block) + get_small_metadata() + value.block_size);
-        current_block_size = current_block_size + get_small_metadata() + value.block_size;
+        current_block = reinterpret_cast<void*>(reinterpret_cast<unsigned char*>(current_block) + sizeof(size_t) + sizeof(void*) + value.block_size);
+
+        current_size = current_size + sizeof(size_t) + sizeof(void*) + value.block_size;
     }
 
     if (block_number == 0)
     {
         warning_with_guard(get_typename() + "allocator without free blocks");
     }
+
+    std::string string_data;
+
+//    for (block_info value : blocks_info)
+//    {
+//        std::string is_oc = value.is_block_occupied ? "YES" : "NO";
+//        string_data += (is_oc + "  " + std::to_string(value.block_size) + " | ");
+//    }
+
+    std::cout << "info: " << string_data << std::endl;
+
+    trace_with_guard(get_typename() + "method get blocks info has finished");
 
     return blocks_info;
 }
