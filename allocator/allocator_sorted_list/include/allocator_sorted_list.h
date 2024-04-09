@@ -2,13 +2,13 @@
 #define MATH_PRACTICE_AND_OPERATING_SYSTEMS_ALLOCATOR_ALLOCATOR_SORTED_LIST_H
 
 #include <allocator_guardant.h>
-#include "../../../logger/client_logger/include/client_logger.h"
 #include <allocator_test_utils.h>
 #include <allocator_with_fit_mode.h>
 #include <logger_guardant.h>
 #include <typename_holder.h>
+#include <iostream>
+#include <chrono>
 #include <mutex>
-#include <sstream>
 #include <thread>
 
 class allocator_sorted_list final:
@@ -46,9 +46,7 @@ public:
 
 public:
 
-    [[nodiscard]] void *allocate(
-            size_t value_size,
-            size_t values_count) override;
+    [[nodiscard]] void *allocate(size_t value_size, size_t values_count) override;
 
     void deallocate(void *at) override;
 
@@ -85,13 +83,15 @@ private:
 
 private:
 
-    void *get_aviable_block_next_block_address(void *block_address) noexcept;
+    block_size_t get_aviable_block_size(
+            void *block_address) noexcept;
 
-    size_t get_small_metadata() const noexcept;
+    void *get_aviable_block_next_block_address(
+            void *block_address) noexcept;
 
-    bool is_block_occupied(void* block) const noexcept;
+    block_size_t get_occupied_block_size(
+            void *block_address) noexcept;
 
-    size_t get_aviable_block_size(void *block_address) const noexcept;
 
 };
 
