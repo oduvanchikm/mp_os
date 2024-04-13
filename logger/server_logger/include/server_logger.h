@@ -12,6 +12,16 @@
 #include <cstring>
 #include <unistd.h>
 
+#include <sys/types.h>
+#include <sys/ipc.h>
+#include <sys/msg.h>
+#include <iostream>
+#include <map>
+#include <set>
+#include <string>
+#include <stdexcept>
+#include <cstring>
+
 #define _LINUX_
 //#define _WINDOWS_
 
@@ -24,7 +34,7 @@ private:
 
     std::map<std::string, std::pair<mqd_t, std::set<logger::severity>>> _queues_streams;
 
-    static std::map<std::string, std::pair<mqd_t, int>> _queue;
+    static std::map<std::string, std::pair<int, int>> _queue;
 
 #elif _WINDOWS_
 
@@ -38,7 +48,7 @@ public:
 
 #ifdef _LINUX_
 
-    server_logger(std::map<std::string, std::pair<mqd_t, int>> const &builder);
+    server_logger(std::map<std::string, std::pair<int, int>> const &builder);
 
 #elif _WIN
 

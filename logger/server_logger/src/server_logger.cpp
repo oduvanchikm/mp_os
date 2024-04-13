@@ -19,13 +19,8 @@ std::map<std::string, std::pair<mqd_t, int>> server_logger::_queue =
 
 struct queue_message
 {
-    std::string data_and_time;
-    char text[100];
-    char pid_queue[20];
-    logger::severity severity_for_logger;
-    int id;
-    int number_of_packets;
-    int count_of_packets;
+    char buffer[500];
+    int int_id;
 };
 
 server_logger::server_logger(server_logger const &other) :
@@ -126,8 +121,6 @@ server_logger::~server_logger() noexcept
 
 logger const *server_logger::log(const std::string &message, logger::severity severity) const noexcept
 {
-    auto string_date_time = current_datetime_to_string();
-
     int id = 0;
 
     for (auto &queue : _queues_streams)
@@ -142,39 +135,34 @@ logger const *server_logger::log(const std::string &message, logger::severity se
 
             for (int i = 0; i < count; ++i)
             {
+                auto string_date_time = current_datetime_to_string();
+                auto string_severity = severity_to_string(severity);
+
                 queue_message message_queue;
 
-                char packet[SIZE + 1];
+                std::string connected_string = "[" + string_date_time + "][" + string_severity + "]" + message;
 
-                int start_pos = i * SIZE;
+                const char* connected_string_char = connected_string.c_str();
 
-                int end_pos = std::min(start_pos + SIZE, message_size);
+//                std::cout << connected_string_char << std::endl;
 
-                memcpy(packet, &message[start_pos], end_pos - start_pos);
+                strcpy(message_queue.buffer, connected_string_char);
 
-                packet[end_pos - start_pos] = '\0';
+                message_queue.int_id = id;
 
-                strcpy(message_queue.text, packet);
+//                std::cout << "size: " << connected_string.size() << std::endl;
 
-                message_queue.severity_for_logger = severity;
-                message_queue.data_and_time = string_date_time;
-
-                pid_t pid = getpid();
-                std::string get_pid_string = std::to_string(pid);
-                strncpy(message_queue.pid_queue, get_pid_string.c_str(), 20);
-
-                message_queue.id = id;
-                message_queue.number_of_packets = i + 1;
-                message_queue.count_of_packets = count;
-
-                try {
+                try
+                {
                     if ((mq_send(queue.second.first, reinterpret_cast<char *>(&message_queue), sizeof(queue_message),
-                                 0)) == -1) {
+                                 0)) == -1)
+                    {
                         perror("mq_send");
                         throw std::runtime_error("It is impossible to send message");
                     }
                 }
-                catch (const std::runtime_error &e) {
+                catch (const std::runtime_error &e)
+                {
                     std::cerr << "Error: " << e.what() << std::endl;
                 }
 
@@ -189,4 +177,3 @@ logger const *server_logger::log(const std::string &message, logger::severity se
 #elif _WIN
 
 #endif
-

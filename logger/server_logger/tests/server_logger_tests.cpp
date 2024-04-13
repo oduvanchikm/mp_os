@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
     delete builder;
 
     logger->log("66666666666666666666", logger::severity::information)
-    ->log("eruygfquhbjnkigytfgvehbjkjqioy78t6cgvhbjioydrtcgvhbhudrtvgbhnj hugyfdrtcgvhjbhufdrcgvhjbhuiutfygvjhbhuuhuy uergf34pty743 5y72 348ty54uoeruhgfhoer y8753ythgyrgiwur8y429t5t", logger::severity::debug);
+            ->log("eruygfquhbjnkigytfgvehbjkjqioy78t6cgvhbjioydrtcgvhbhudrtvgbhnj hugyfdrtcgvhjbhufdrcgvhjbhuiutfygvjhbhuuhuy uergf34pty743 5y72 348ty54uoeruhgfhoer y8753ythgyrgiwur8y429t5t", logger::severity::debug);
 
     mq_getattr(queue_1, &attrib_queue);
 
