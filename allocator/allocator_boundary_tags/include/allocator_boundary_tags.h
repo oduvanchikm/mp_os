@@ -6,6 +6,7 @@
 #include <allocator_with_fit_mode.h>
 #include <logger_guardant.h>
 #include <typename_holder.h>
+#include <mutex>
 
 class allocator_boundary_tags final:
     private allocator_guardant,
@@ -24,10 +25,10 @@ public:
     ~allocator_boundary_tags() override;
     
     allocator_boundary_tags(
-        allocator_boundary_tags const &other);
+        allocator_boundary_tags const &other) = delete;
     
     allocator_boundary_tags &operator=(
-        allocator_boundary_tags const &other);
+        allocator_boundary_tags const &other) = delete;
     
     allocator_boundary_tags(
         allocator_boundary_tags &&other) noexcept;
@@ -59,7 +60,7 @@ public:
 
 private:
     
-    inline allocator *get_allocator() const override;
+    inline allocator *get_allocator() const noexcept override;
 
 public:
     
@@ -72,7 +73,33 @@ private:
 private:
     
     inline std::string get_typename() const noexcept override;
-    
+
+    size_t get_small_meta_size() const noexcept;
+
+    size_t get_ancillary_space_size() const noexcept;
+
+    inline size_t get_size_of_allocator() const noexcept;
+
+    inline allocator_with_fit_mode::fit_mode get_fit_mode() const noexcept;
+
+    inline std::mutex* get_mutex() const noexcept;
+
+    inline size_t get_available_size() const noexcept;
+
+    inline void* get_first_occupied_block() const noexcept;
+
+    size_t get_size_occupied_block(void* block_address) const noexcept;
+
+    inline void* get_previous_occupied_block(void* block_address) const noexcept;
+
+    inline void* get_next_occupied_block(void* block_address) const noexcept;
+
+    size_t get_available_block_size(void* block_address) const;
+
+    unsigned char* get_end_of_block(void* block_address) const noexcept;
+
+    unsigned char* get_start_of_block(void* block_address) const noexcept;
+
 };
 
 #endif //MATH_PRACTICE_AND_OPERATING_SYSTEMS_ALLOCATOR_ALLOCATOR_BOUNDARY_TAGS_H
