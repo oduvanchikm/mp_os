@@ -43,10 +43,10 @@ TEST(positiveTests, test1)
     auto const *first_block = reinterpret_cast<int const *>(subject->allocate(sizeof(int), 10));
     auto const *second_block = reinterpret_cast<int const *>(subject->allocate(sizeof(int), 10));
     auto const *third_block = reinterpret_cast<int const *>(subject->allocate(sizeof(int), 10));
-    
+
     ASSERT_EQ(first_block + 10, second_block);
     ASSERT_EQ(second_block + 10, third_block);
-    
+
     subject->deallocate(const_cast<void *>(reinterpret_cast<void const *>(second_block)));
     
     auto *the_same_subject = dynamic_cast<allocator_with_fit_mode *>(subject);
