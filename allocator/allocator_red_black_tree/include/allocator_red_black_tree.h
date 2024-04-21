@@ -6,6 +6,7 @@
 #include <allocator_with_fit_mode.h>
 #include <logger_guardant.h>
 #include <typename_holder.h>
+#include <mutex>
 
 class allocator_red_black_tree final:
     private allocator_guardant,
@@ -14,6 +15,14 @@ class allocator_red_black_tree final:
     private logger_guardant,
     private typename_holder
 {
+
+public:
+
+//    enum class colour_block : unsigned char
+//    {
+//        RED,
+//        BLACK
+//    };
 
 private:
     
@@ -72,6 +81,50 @@ private:
 private:
     
     inline std::string get_typename() const noexcept override;
+
+private:
+
+    inline size_t get_ancillary_space_size() const noexcept;
+
+    std::mutex *get_mutex() const noexcept;
+
+    size_t get_common_size_of_allocator() const;
+
+    size_t get_free_size_of_allocator() const;
+
+    allocator_with_fit_mode::fit_mode get_fit_mode() const noexcept;
+
+    void *get_first_available_block() const noexcept;
+
+    void delete_block(void* block_address) noexcept;
+
+    unsigned char get_is_occupied_block(void* block_address) const noexcept;
+
+    unsigned char get_colour_block(void* block_address) const noexcept;
+
+    size_t get_small_free_metadata() const noexcept;
+
+    void* get_next_free_block(void* block_address) const noexcept;
+
+    void* get_previous_free_block(void* block_address) const noexcept;
+
+    size_t get_size_block(void* block_address) const noexcept;
+
+    void* get_parent_block(void* block_address) const noexcept;
+
+    void* get_left_subtree_block(void* block_address) const noexcept;
+
+    void* get_right_subtree_block(void* block_address) const noexcept;
+
+    void rebalance_red_black_tree() noexcept;
+
+    void small_right_rotation(void* address_block) noexcept;
+
+    void big_right_rotation(void* address_block) noexcept;
+
+    void small_left_rotation(void* address_block) noexcept;
+
+    void big_left_rotation(void* address_block) noexcept;
     
 };
 
