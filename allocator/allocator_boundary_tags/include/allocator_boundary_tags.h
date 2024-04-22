@@ -100,6 +100,8 @@ private:
 
     unsigned char* get_start_of_block(void* block_address) const noexcept;
 
+    void my_logger(std::string const &message, logger::severity severity) const;
+
 };
 
 #endif //MATH_PRACTICE_AND_OPERATING_SYSTEMS_ALLOCATOR_ALLOCATOR_BOUNDARY_TAGS_H
