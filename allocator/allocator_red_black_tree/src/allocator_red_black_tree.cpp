@@ -107,6 +107,7 @@ allocator_red_black_tree::allocator_red_black_tree(
 
     // 0 - black colour
     // 1 - red colour
+
     auto* block_colour = reinterpret_cast<unsigned char*>(is_occupied_block + 1);
     *block_colour = 0;
 
@@ -381,62 +382,7 @@ void allocator_red_black_tree::delete_block(void* target_block) noexcept
 
     if (flag_black_tree)
     {
-        fix_red_black_tree(target_block);
-    }
-
-}
-
-void allocator_red_black_tree::fix_red_black_tree(void* target_block) noexcept
-{
-    // 0 - black, 1 - red
-    void* parent_for_target_block = get_parent_block(target_block);
-    void* grandparent_for_target_block = get_parent_block(parent_for_target_block);
-    void* uncle_for_target_block = nullptr;
-    unsigned char color_target_block = 0;
-
-    if (parent_for_target_block == nullptr)
-    {
-        *reinterpret_cast<unsigned char*>(reinterpret_cast<unsigned char*>(target_block) + sizeof(unsigned char)) = 0;
-    }
-    else
-    {
-        void* left_subtree = nullptr;
-        void* right_subtree = nullptr;
-        bool flag_left_or_right = false;
-
-        // false - left, right - true
-
-        if (get_right_subtree_block(grandparent_for_target_block) == parent_for_target_block)
-        {
-            uncle_for_target_block = get_left_subtree_block(grandparent_for_target_block);
-            flag_left_or_right = false;
-        }
-        else
-        {
-            uncle_for_target_block = get_right_subtree_block(grandparent_for_target_block);
-            flag_left_or_right = true;
-        }
-
-        unsigned char* colour_for_uncle = reinterpret_cast<unsigned char*>(reinterpret_cast<unsigned char*>(uncle_for_target_block) + sizeof(unsigned char));
-        *colour_for_uncle = 0;
-
-        if (*colour_for_uncle == 0) // black
-        {
-
-        }
-        else // red
-        {
-            if (flag_left_or_right)
-            {
-                // TODO SMALL RIGHT ROTATION
-            }
-            else
-            {
-                // TODO SMALL LEFT ROTATION
-            }
-        }
-
-
+        fix_red_black_tree(get_parent_block(target_block));
     }
 }
 
@@ -624,6 +570,9 @@ void* allocator_red_black_tree::get_first_fit(size_t size) const noexcept
     size_t value_size,
     size_t values_count)
 {
+    std::mutex* mutex_boundary_tags = get_mutex();
+    std::lock_guard<std::mutex> lock(*mutex_boundary_tags);
+
     size_t requested_size = value_size * values_count;
 
     allocator_with_fit_mode::fit_mode fit_mode = get_fit_mode();
@@ -696,14 +645,142 @@ void* allocator_red_black_tree::get_first_fit(size_t size) const noexcept
         }
     }
 
-    // TODO WRITE ALLOCATE METHOD
+    // TODO REWRITE ALLOCATE METHOD
+    // TODO хз как закончить
 
     return reinterpret_cast<unsigned char*>(target_block) + get_small_free_metadata();
 }
 
+void allocator_red_black_tree::insert(void* target_block) noexcept
+{
+    void* current_block = get_root();
+    void* parent = nullptr;
+
+    while (current_block != nullptr)
+    {
+        size_t target_block_size = get_size_block(target_block);
+        size_t current_block_size = get_size_block(current_block);
+
+        if (target_block_size < current_block_size)
+        {
+            parent = current_block;
+            current_block = get_left_subtree_block(current_block);
+        }
+        else
+        {
+            parent = current_block;
+            current_block = get_right_subtree_block(current_block);
+        }
+    }
+
+    // 0 - free, 1 - occupied
+    // 0 - black, 1 - red;
+
+    *reinterpret_cast<unsigned char*>(target_block) = 0;
+    *reinterpret_cast<unsigned char*>(reinterpret_cast<unsigned char*>(target_block) + sizeof(unsigned char)) = 1;
+
+    *reinterpret_cast<size_t*>(reinterpret_cast<unsigned char*>(target_block) + sizeof(unsigned char) + sizeof(unsigned char) + sizeof(void*) + sizeof(void*)) = get_size_block(target_block);
+    *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(target_block) + sizeof(unsigned char) + sizeof(unsigned char) + sizeof(void*) + sizeof(void*) + sizeof(size_t)) = parent;
+    *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(target_block) + sizeof(unsigned char) + sizeof(unsigned char) + sizeof(void*) + sizeof(void*) + sizeof(size_t) + sizeof(void*)) = nullptr;
+    *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(target_block) + sizeof(unsigned char) + sizeof(unsigned char) + sizeof(void*) + sizeof(void*) + sizeof(size_t) + sizeof(void*) + sizeof(void*)) = nullptr;
+
+    fix_red_black_tree(target_block);
+}
+
+void allocator_red_black_tree::fix_red_black_tree(void* target_block) noexcept
+{
+    void* parent_block_to_target_block = get_parent_block(target_block);
+    void* grandparent_block_to_target_block = nullptr;
+    void* uncle_block_to_target_block = nullptr;
+
+    if (parent_block_to_target_block == nullptr)
+    {
+        *reinterpret_cast<unsigned char*>(reinterpret_cast<unsigned char*>(target_block) + sizeof(unsigned char)) = 0;
+    }
+    else
+    {
+        unsigned char colour_parent_to_target_block = get_colour_block(parent_block_to_target_block);
+
+        if (colour_parent_to_target_block == 1) // red
+        {
+            grandparent_block_to_target_block = get_parent_block(parent_block_to_target_block);
+
+            if (grandparent_block_to_target_block != nullptr)
+            {
+                if (get_right_subtree_block(grandparent_block_to_target_block) == parent_block_to_target_block)
+                {
+                    uncle_block_to_target_block = get_left_subtree_block(grandparent_block_to_target_block);
+                }
+                else
+                {
+                    uncle_block_to_target_block = get_right_subtree_block(grandparent_block_to_target_block);
+                }
+
+                unsigned char colour_uncle_to_target_block = get_colour_block(uncle_block_to_target_block);
+
+                if (colour_uncle_to_target_block == 0) // black
+                {
+                    // if target is left son in parent
+                    if (get_left_subtree_block(parent_block_to_target_block) == target_block)
+                    {
+                        small_left_rotation(grandparent_block_to_target_block);
+                        // grandparent = red, parent = black
+                        *reinterpret_cast<unsigned char*>(reinterpret_cast<unsigned char*>(grandparent_block_to_target_block) + sizeof(unsigned char)) = 1;
+                        *reinterpret_cast<unsigned char*>(reinterpret_cast<unsigned char*>(parent_block_to_target_block) + sizeof(unsigned char)) = 0;
+                    }
+                    else
+                    {
+                        small_right_rotation(parent_block_to_target_block);
+                        fix_red_black_tree(parent_block_to_target_block);
+                    }
+                }
+                else // red
+                {
+                    // if uncle red => uncle = black, parent = black, grandparent = red
+
+                    *reinterpret_cast<unsigned char*>(reinterpret_cast<unsigned char*>(uncle_block_to_target_block) + sizeof(unsigned char)) = 0;
+                    *reinterpret_cast<unsigned char*>(reinterpret_cast<unsigned char*>(grandparent_block_to_target_block) + sizeof(unsigned char)) = 1;
+                    *reinterpret_cast<unsigned char*>(reinterpret_cast<unsigned char*>(parent_block_to_target_block) + sizeof(unsigned char)) = 0;
+
+                    fix_red_black_tree(grandparent_block_to_target_block);
+                }
+            }
+            else
+            {
+                *reinterpret_cast<unsigned char*>(reinterpret_cast<unsigned char*>(parent_block_to_target_block) + sizeof(unsigned char)) = 0;
+            }
+        }
+    }
+}
+
 void allocator_red_black_tree::deallocate(void *at)
 {
-    throw not_implemented("void allocator_red_black_tree::deallocate(void *)", "your code should be here...");
+    std::mutex* mutex_boundary_tags = get_mutex();
+    std::lock_guard<std::mutex> lock(*mutex_boundary_tags);
+
+    void* target_block = reinterpret_cast<unsigned char*>(at) - get_small_free_metadata();
+
+    size_t target_block_size = get_size_block(target_block);
+
+    *reinterpret_cast<unsigned char*>(target_block) = 0;
+
+    void* previous_to_target_block = get_previous_free_block(target_block);
+
+
+    void* next_to_target_block = get_next_free_block(target_block);
+
+//    if (previous_to_target_block != nullptr && (*reinterpret_cast<unsigned char*>(previous_to_target_block) == 0))
+//    {
+//
+//    }
+//
+//    if (next_to_target_block != nullptr && (*reinterpret_cast<unsigned char*>(next_to_target_block) == 0))
+
+    // TODO хз как закончить
+
+    insert(target_block);
+
+
 }
 
 inline void allocator_red_black_tree::set_fit_mode(allocator_with_fit_mode::fit_mode mode)
@@ -713,7 +790,7 @@ inline void allocator_red_black_tree::set_fit_mode(allocator_with_fit_mode::fit_
 
 std::vector<allocator_test_utils::block_info> allocator_red_black_tree::get_blocks_info() const noexcept
 {
-    throw not_implemented("std::vector<allocator_test_utils::block_info> allocator_red_black_tree::get_blocks_info() const noexcept", "your code should be here...");
+    // TODO хз че тут писать
 }
 
 inline std::string allocator_red_black_tree::get_typename() const noexcept

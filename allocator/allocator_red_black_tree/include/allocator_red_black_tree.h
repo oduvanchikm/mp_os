@@ -16,14 +16,6 @@ class allocator_red_black_tree final:
     private typename_holder
 {
 
-public:
-
-//    enum class colour_block : unsigned char
-//    {
-//        RED,
-//        BLACK
-//    };
-
 private:
     
     void *_trusted_memory;
@@ -116,8 +108,6 @@ private:
 
     void* get_right_subtree_block(void* block_address) const noexcept;
 
-    void fix_red_black_tree(void* target_block) noexcept;
-
     void small_right_rotation(void* address_block) noexcept;
 
     void big_right_rotation(void* address_block) noexcept;
@@ -130,7 +120,11 @@ private:
 
     void* get_worst_fit(size_t size) const noexcept;
 
-    void* get_first_fit(size_t size) const noexcept
+    void* get_first_fit(size_t size) const noexcept;
+
+    void insert(void* target_block) noexcept;
+
+    void fix_red_black_tree(void* target_block) noexcept;
     
 };
 
