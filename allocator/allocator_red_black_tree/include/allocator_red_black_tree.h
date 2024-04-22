@@ -33,10 +33,10 @@ public:
     ~allocator_red_black_tree() override;
     
     allocator_red_black_tree(
-        allocator_red_black_tree const &other);
+        allocator_red_black_tree const &other) = delete;
     
     allocator_red_black_tree &operator=(
-        allocator_red_black_tree const &other);
+        allocator_red_black_tree const &other) = delete;
     
     allocator_red_black_tree(
         allocator_red_black_tree &&other) noexcept;
@@ -94,7 +94,7 @@ private:
 
     allocator_with_fit_mode::fit_mode get_fit_mode() const noexcept;
 
-    void *get_first_available_block() const noexcept;
+    void *get_root() const noexcept;
 
     void delete_block(void* block_address) noexcept;
 
@@ -116,7 +116,7 @@ private:
 
     void* get_right_subtree_block(void* block_address) const noexcept;
 
-    void rebalance_red_black_tree() noexcept;
+    void fix_red_black_tree(void* target_block) noexcept;
 
     void small_right_rotation(void* address_block) noexcept;
 
@@ -125,6 +125,12 @@ private:
     void small_left_rotation(void* address_block) noexcept;
 
     void big_left_rotation(void* address_block) noexcept;
+
+    void* get_best_fit(size_t size) const noexcept;
+
+    void* get_worst_fit(size_t size) const noexcept;
+
+    void* get_first_fit(size_t size) const noexcept
     
 };
 

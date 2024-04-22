@@ -4,31 +4,45 @@
 
 allocator_red_black_tree::~allocator_red_black_tree()
 {
-    throw not_implemented("allocator_red_black_tree::~allocator_red_black_tree()", "your code should be here...");
+    delete get_mutex();
+    auto* allocator = get_allocator();
+
+    if (allocator == nullptr)
+    {
+        ::operator delete(_trusted_memory);
+    }
+    else
+    {
+        allocator->deallocate(_trusted_memory);
+    }
 }
 
-allocator_red_black_tree::allocator_red_black_tree(
-    allocator_red_black_tree const &other)
+allocator_red_black_tree::allocator_red_black_tree(allocator_red_black_tree &&other) noexcept :
+    _trusted_memory(other._trusted_memory)
 {
-    throw not_implemented("allocator_red_black_tree::allocator_red_black_tree(allocator_red_black_tree const &)", "your code should be here...");
+    _trusted_memory = nullptr;
 }
 
-allocator_red_black_tree &allocator_red_black_tree::operator=(
-    allocator_red_black_tree const &other)
+allocator_red_black_tree &allocator_red_black_tree::operator=(allocator_red_black_tree &&other) noexcept
 {
-    throw not_implemented("allocator_red_black_tree &allocator_red_black_tree::operator=(allocator_red_black_tree const &)", "your code should be here...");
-}
+    if (this != &other)
+    {
+        allocator* all = get_allocator();
 
-allocator_red_black_tree::allocator_red_black_tree(
-    allocator_red_black_tree &&other) noexcept
-{
-    throw not_implemented("allocator_red_black_tree::allocator_red_black_tree(allocator_red_black_tree &&) noexcept", "your code should be here...");
-}
+        if (all != nullptr)
+        {
+            all->deallocate(_trusted_memory);
+        }
+        else
+        {
+            ::operator delete(_trusted_memory);
+        }
 
-allocator_red_black_tree &allocator_red_black_tree::operator=(
-    allocator_red_black_tree &&other) noexcept
-{
-    throw not_implemented("allocator_red_black_tree &allocator_red_black_tree::operator=(allocator_red_black_tree &&) noexcept", "your code should be here...");
+        _trusted_memory = other._trusted_memory;
+        other._trusted_memory = nullptr;
+    }
+
+    return *this;
 }
 
 inline size_t allocator_red_black_tree::get_ancillary_space_size() const noexcept
@@ -73,8 +87,8 @@ allocator_red_black_tree::allocator_red_black_tree(
     std::mutex** mutex_space_address = reinterpret_cast<std::mutex** >(fit_mode_space_address + 1);
     *mutex_space_address = new std::mutex;
 
-    void **first_block_address_space_address = reinterpret_cast<void **>(mutex_space_address + 1);
-    *first_block_address_space_address = reinterpret_cast<void *>(first_block_address_space_address + 1);
+    void **root = reinterpret_cast<void **>(mutex_space_address + 1);
+    *root = reinterpret_cast<void *>(root + 1);
 
     // free blocks metadata:
     // bool is_occupied
@@ -88,7 +102,7 @@ allocator_red_black_tree::allocator_red_black_tree(
 
     // 0 - free, 1 - occupied
 
-    auto* is_occupied_block = reinterpret_cast<unsigned char*>(first_block_address_space_address);
+    auto* is_occupied_block = reinterpret_cast<unsigned char*>(*root);
     *is_occupied_block = 0;
 
     // 0 - black colour
@@ -144,7 +158,7 @@ allocator_with_fit_mode::fit_mode allocator_red_black_tree::get_fit_mode() const
     return *reinterpret_cast<allocator_with_fit_mode::fit_mode *>(reinterpret_cast<unsigned char *>(_trusted_memory) + sizeof(allocator *) + sizeof(logger *) + sizeof(size_t) + sizeof(size_t));
 }
 
-void *allocator_red_black_tree::get_first_available_block() const noexcept
+void *allocator_red_black_tree::get_root() const noexcept
 {
     return *reinterpret_cast<void **>(reinterpret_cast<unsigned char *>(_trusted_memory) + sizeof(allocator *) + sizeof(logger *) + sizeof(size_t) + sizeof(size_t) + sizeof(allocator_with_fit_mode::fit_mode) + sizeof(std::mutex*));
 }
@@ -372,46 +386,68 @@ void allocator_red_black_tree::delete_block(void* target_block) noexcept
 
     if (flag_black_tree)
     {
-
+        fix_red_black_tree(target_block);
     }
 
 }
 
-void allocator_red_black_tree::rebalance_red_black_tree() noexcept
+void allocator_red_black_tree::fix_red_black_tree(void* target_block) noexcept
 {
+    // 0 - black, 1 - red
+    void* parent_for_target_block = get_parent_block(target_block);
+    void* grandparent_for_target_block = get_parent_block(parent_for_target_block);
+    void* uncle_for_target_block = nullptr;
+    unsigned char color_target_block = 0;
 
+    if (parent_for_target_block == nullptr)
+    {
+        *reinterpret_cast<unsigned char*>(reinterpret_cast<unsigned char*>(target_block) + sizeof(unsigned char)) = 0;
+    }
+    else
+    {
+        void* left_subtree = nullptr;
+        void* right_subtree = nullptr;
+        bool flag_left_or_right = false;
+
+        // false - left, right - true
+
+        if (get_right_subtree_block(grandparent_for_target_block) == parent_for_target_block)
+        {
+            uncle_for_target_block = get_left_subtree_block(grandparent_for_target_block);
+            flag_left_or_right = false;
+        }
+        else
+        {
+            uncle_for_target_block = get_right_subtree_block(grandparent_for_target_block);
+            flag_left_or_right = true;
+        }
+
+        unsigned char* colour_for_uncle = reinterpret_cast<unsigned char*>(reinterpret_cast<unsigned char*>(uncle_for_target_block) + sizeof(unsigned char));
+        *colour_for_uncle = 0;
+
+        if (*colour_for_uncle == 0) // black
+        {
+
+        }
+        else // red
+        {
+            if (flag_left_or_right)
+            {
+                // TODO SMALL RIGHT ROTATION
+            }
+            else
+            {
+                // TODO SMALL LEFT ROTATION
+            }
+        }
+
+
+    }
 }
 
 void allocator_red_black_tree::small_right_rotation(void* address_block) noexcept
 {
-    void* parent_block = get_parent_block(address_block);
 
-    if (get_left_subtree_block(address_block) != nullptr)
-    {
-        void* left_subtree_node = get_left_subtree_block(address_block);
-
-        if (parent_block == nullptr)
-        {
-            void** first_free_block = reinterpret_cast<void **>(reinterpret_cast<unsigned char *>(_trusted_memory) +
-                                                                sizeof(allocator *) + sizeof(logger *) + sizeof(size_t) + sizeof(size_t) + sizeof(allocator_with_fit_mode::fit_mode) + sizeof(std::mutex*));
-            *first_free_block = left_subtree_node;
-        }
-        else
-        {
-            if (get_right_subtree_block(parent_block) == address_block)
-            {
-                void** right_subtree = reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(parent_block) + sizeof(unsigned char) * 2 + sizeof(void*) * 3 + sizeof(size_t) + sizeof(void*));
-                *right_subtree = left_subtree_node;
-            }
-            else
-            {
-                void** left_subtree = reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(parent_block) + sizeof(unsigned char) * 2 + sizeof(void*) * 3 + sizeof(size_t));
-                *left_subtree = left_subtree_node;
-            }
-        }
-
-        void* parent_for
-    }
 }
 
 void allocator_red_black_tree::big_right_rotation(void* address_block) noexcept
@@ -429,6 +465,92 @@ void allocator_red_black_tree::big_left_rotation(void* address_block) noexcept
 
 }
 
+void* allocator_red_black_tree::get_best_fit(size_t size) const noexcept
+{
+    void* current_block = get_root();
+    void* previous_block = nullptr;
+
+    if (current_block == nullptr)
+    {
+        return nullptr;
+    }
+
+    while (current_block != nullptr)
+    {
+        size_t current_block_size = get_size_block(current_block);
+
+        if (current_block_size >= size)
+        {
+            previous_block = current_block;
+        }
+
+        if (current_block_size < size)
+        {
+            current_block = get_right_subtree_block(current_block);
+        }
+        else if (current_block_size > size)
+        {
+            current_block = get_left_subtree_block(current_block);
+        }
+        else
+        {
+            current_block = nullptr;
+        }
+    }
+
+    return previous_block;
+}
+
+void* allocator_red_black_tree::get_worst_fit(size_t size) const noexcept
+{
+    void* current_block = get_root();
+    void* previous_block = nullptr;
+
+    if (current_block == nullptr)
+    {
+        return nullptr;
+    }
+
+    while (current_block != nullptr)
+    {
+        size_t current_block_size = get_size_block(current_block);
+
+        if (current_block_size >= size)
+        {
+            previous_block = current_block;
+        }
+
+        current_block = get_right_subtree_block(current_block);
+    }
+
+    return previous_block;
+}
+
+void* allocator_red_black_tree::get_first_fit(size_t size) const noexcept
+{
+    void* current_block = get_root();
+    void* previous_block = nullptr;
+
+    if (current_block == nullptr)
+    {
+        return nullptr;
+    }
+
+    while (current_block != nullptr)
+    {
+        size_t current_block_size = get_size_block(current_block);
+
+        if (current_block_size >= size)
+        {
+            return current_block;
+        }
+
+        current_block = get_right_subtree_block(current_block);
+    }
+
+    return nullptr;
+}
+
 [[nodiscard]] void *allocator_red_black_tree::allocate(
     size_t value_size,
     size_t values_count)
@@ -440,31 +562,22 @@ void allocator_red_black_tree::big_left_rotation(void* address_block) noexcept
     std::cout << "Information about blocks of memory: " << std::to_string(requested_size) << std::endl;
 
     void *target_block = nullptr;
-    void *previous_to_target_block = nullptr;
-    void* next_to_target_block = nullptr;
+    void *previous_to_target_block = get_previous_free_block(target_block);
+    void* next_to_target_block = get_next_free_block(target_block);
+
+    switch (fit_mode)
     {
-        void *previous_block = nullptr;
-        void *current_block = get_first_available_block();
+        case allocator_with_fit_mode::fit_mode::the_worst_fit:
+            target_block = get_worst_fit(requested_size);
+            break;
 
-        while (current_block != nullptr)
-        {
-            size_t current_block_size = get_size_block(current_block);
+        case allocator_with_fit_mode::fit_mode::first_fit:
+            target_block = get_first_fit(requested_size);
+            break;
 
-            if (current_block_size >= requested_size &&
-                (fit_mode == allocator_with_fit_mode::fit_mode::first_fit ||
-                 fit_mode == allocator_with_fit_mode::fit_mode::the_best_fit &&
-                 (target_block == nullptr || get_size_block(target_block) > current_block_size) ||
-                 fit_mode == allocator_with_fit_mode::fit_mode::the_worst_fit && (target_block == nullptr ||
-                         get_size_block(target_block) < current_block_size)))
-            {
-                previous_to_target_block = previous_block;
-                target_block = current_block;
-                next_to_target_block = get_next_free_block(current_block);
-
-            }
-            previous_block = current_block;
-            current_block = get_next_free_block(current_block);
-        }
+        case allocator_with_fit_mode::fit_mode::the_best_fit:
+            target_block = get_best_fit(requested_size);
+            break;
     }
 
     if (target_block == nullptr)
@@ -476,6 +589,43 @@ void allocator_red_black_tree::big_left_rotation(void* address_block) noexcept
     delete_block(target_block);
 
     *reinterpret_cast<unsigned char*>(target_block) = 1;
+
+    size_t target_block_size = get_size_block(target_block);
+
+    if (previous_to_target_block == nullptr)
+    {
+        size_t blocks_sizes_difference = target_block_size - requested_size;
+
+        if (blocks_sizes_difference > 0 && blocks_sizes_difference < get_small_free_metadata())
+        {
+            requested_size = target_block_size;
+            void* next_available_block = get_next_free_block(target_block);
+            void** first_available_block = reinterpret_cast<void**>(reinterpret_cast<unsigned char *>(_trusted_memory) + sizeof(allocator *) + sizeof(logger *) + sizeof(size_t) + sizeof(size_t) + sizeof(allocator_with_fit_mode::fit_mode) + sizeof(std::mutex*));
+            *first_available_block = next_available_block;
+        }
+        else
+        {
+            *reinterpret_cast<size_t*>(reinterpret_cast<unsigned char*>(target_block) + sizeof(unsigned char) * 2 + sizeof(void*) * 2) = requested_size;
+
+        }
+    }
+    else
+    {
+        size_t blocks_sizes_difference = target_block_size - requested_size;
+
+        if (blocks_sizes_difference > 0 && blocks_sizes_difference < get_small_free_metadata())
+        {
+            requested_size = target_block_size;
+            void* next_available_block = get_next_free_block(target_block);
+            void** first_available_block = reinterpret_cast<void**>(reinterpret_cast<unsigned char *>(_trusted_memory) + sizeof(allocator *) + sizeof(logger *) + sizeof(size_t) + sizeof(size_t) + sizeof(allocator_with_fit_mode::fit_mode) + sizeof(std::mutex*));
+            *first_available_block = next_available_block;
+        }
+        else
+        {
+            *reinterpret_cast<size_t*>(reinterpret_cast<unsigned char*>(target_block) + sizeof(unsigned char) * 2 + sizeof(void*) * 2) = requested_size;
+
+        }
+    }
 
 }
 
