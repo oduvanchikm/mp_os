@@ -38,10 +38,10 @@ TEST(positive_tests, test1) {
                                                     logger::severity::debug}
                                            });
 
-    allocator *alloc = new allocator_red_black_tree(3000, nullptr, logger, allocator_with_fit_mode::fit_mode::first_fit);
+    allocator *alloc = new allocator_red_black_tree(3000, nullptr, logger, allocator_with_fit_mode::fit_mode::the_best_fit);
 
 
-    auto first_block = reinterpret_cast<int *>(alloc->allocate(sizeof(int), 250));
+//    auto first_block = reinterpret_cast<int *>(alloc->allocate(sizeof(int), 250));
 
     auto second_block = reinterpret_cast<char *>(alloc->allocate(sizeof(int), 25));
 

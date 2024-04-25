@@ -19,6 +19,8 @@ class client_logger final:
         public logger
 {
 
+    friend class client_logger_builder;
+
 private:
 
     std::string _format_log_string;
@@ -31,9 +33,9 @@ private:
 
     static std::map<std::string, std::pair<std::ofstream*, size_t>> _global_streams;
 
-public:
-
     client_logger(std::map<std::string, std::set<logger::severity>> const &stream, std::string const &format_log_string);
+
+public:
 
     client_logger(client_logger const &other);
 

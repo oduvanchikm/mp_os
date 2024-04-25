@@ -5,14 +5,14 @@
 #include <unistd.h>
 #include <string>
 
-struct queue_message
-{
-    std::string data_and_time;
-    std::string text;
-    std::string pid_queue;
-    logger::severity severity_for_logger;
-    size_t id;
-};
+//struct queue_message
+//{
+//    std::string data_and_time;
+//    std::string text;
+//    std::string pid_queue;
+//    logger::severity severity_for_logger;
+//    size_t id;
+//};
 
 int main(int argc, char *argv[])
 {
@@ -50,25 +50,24 @@ int main(int argc, char *argv[])
 
     size_t msg_size = attrib_queue.mq_msgsize;
 
-    queue_message received_message;
+//    queue_message received_message;
+    char* buffer = new char[msg_size];;
+
     unsigned int priority;
 
-    if (mq_receive(queue_1, reinterpret_cast<char*>(&received_message), msg_size, &priority) == -1)
+    if (mq_receive(queue_1, buffer, msg_size, &priority) == -1)
     {
+        delete[] buffer;
         throw std::runtime_error("Error receiving message from queue");
     }
 
-    std::string message_received = "Received message: ";
-//    message_received += "Severity: " + std::to_string(received_message.severity_for_logger) + ", ";
-    message_received += "Date and Time: " + received_message.data_and_time + ", ";
-    message_received += "PID: " + received_message.pid_queue + ", ";
-    message_received += "Text: " + received_message.text + ", ";
-    message_received += "ID: " + std::to_string(received_message.id);
+    std::cout << "result: " << buffer << std::endl;
 
 
     delete logger;
     mq_close(queue_1);
     mq_unlink(file_name.c_str());
+    delete[] buffer;
 
     return 0;
 }

@@ -320,6 +320,7 @@ void allocator_buddies_system::deallocate(void *at)
     void* target_block = reinterpret_cast<void*>(reinterpret_cast<unsigned char*>(at) - sizeof(unsigned char) - sizeof(short) - sizeof(void*) - sizeof(void*));
 
     short target_block_size = get_power_of_block_size(target_block);
+
     void* next_target_block = get_first_available_block();
     void* previous_target_block = nullptr;
 

@@ -19,9 +19,11 @@ logger_builder *client_logger_builder::add_file_stream(std::string const &stream
     return this;
 }
 
+// abs file std::weakly_canonical
+
 logger_builder *client_logger_builder::add_console_stream(logger::severity severity)
 {
-    add_file_stream("console", severity);
+    add_file_stream("", severity);
 
     return this;
 }
@@ -45,6 +47,7 @@ logger_builder* client_logger_builder::transform_with_configuration(
     auto info_json = nlohmann::json::parse(file);
 
     auto pairs_json = info_json[configuration_path];
+
     for(auto& item : pairs_json)
     {
         _streams_in_builder[item.value("file", "error")].insert({item["severity"]});

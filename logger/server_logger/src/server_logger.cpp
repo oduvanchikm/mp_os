@@ -17,11 +17,6 @@ std::map<std::string, std::pair<mqd_t, int>> server_logger::_queue =
 
 #endif
 
-struct queue_message
-{
-    char buffer[500];
-    int int_id;
-};
 
 server_logger::server_logger(server_logger const &other) :
         _queues_streams(other._queues_streams)
@@ -70,7 +65,7 @@ server_logger::server_logger(std::map<std::string, std::set<severity>> const &ot
 
     attrib_queue.mq_flags = 0;
     attrib_queue.mq_maxmsg = 10;
-    attrib_queue.mq_msgsize = sizeof(queue_message) * 2;
+    attrib_queue.mq_msgsize = 1024;
     attrib_queue.mq_curmsgs = 0;
 
     for (auto i = other.begin(); i != other.end(); ++i)
@@ -127,34 +122,23 @@ logger const *server_logger::log(const std::string &message, logger::severity se
     {
         if (queue.second.second.find(severity) != queue.second.second.end())
         {
-            int message_size = std::strlen(message.c_str());
-            int count = (message_size + SIZE - 1) / SIZE;
+            int message_size = message.size();
+//            int count = (message_size + SIZE - 1) / SIZE;
+            int count = message.size() / message_size + 1;
 
-            std::cout << "count of packets: " << count << std::endl;
-            std::cout << "message size: " << message_size << std::endl;
 
             for (int i = 0; i < count; ++i)
             {
                 auto string_date_time = current_datetime_to_string();
                 auto string_severity = severity_to_string(severity);
 
-                queue_message message_queue;
-
                 std::string connected_string = "[" + string_date_time + "][" + string_severity + "]" + message;
 
                 const char* connected_string_char = connected_string.c_str();
 
-//                std::cout << connected_string_char << std::endl;
-
-                strcpy(message_queue.buffer, connected_string_char);
-
-                message_queue.int_id = id;
-
-//                std::cout << "size: " << connected_string.size() << std::endl;
-
                 try
                 {
-                    if ((mq_send(queue.second.first, reinterpret_cast<char *>(&message_queue), sizeof(queue_message),
+                    if ((mq_send(queue.second.first, connected_string_char, (sizeof(connected_string_char) + 1),
                                  0)) == -1)
                     {
                         perror("mq_send");
@@ -172,7 +156,6 @@ logger const *server_logger::log(const std::string &message, logger::severity se
     }
     return this;
 }
-
 
 #elif _WIN
 

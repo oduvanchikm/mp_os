@@ -43,7 +43,10 @@ client_logger::client_logger(std::map<std::string, std::set<severity>> const &bu
 client_logger::client_logger(client_logger const &other) :
     _format_log_string(other._format_log_string), _all_streams(other._all_streams)
 {
-
+    for (auto &map : _global_streams)
+    {
+        map.second.second++;
+    }
 }
 
 client_logger &client_logger::operator=(client_logger const &other)
@@ -52,6 +55,12 @@ client_logger &client_logger::operator=(client_logger const &other)
     {
         _format_log_string = other._format_log_string;
         _all_streams = other._all_streams;
+
+        for (auto &map : _all_streams)
+        {
+            _global_streams[map.first].second++;
+        }
+
     }
     return *this;
 }

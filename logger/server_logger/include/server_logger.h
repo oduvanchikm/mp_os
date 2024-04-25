@@ -34,7 +34,7 @@ private:
 
     std::map<std::string, std::pair<mqd_t, std::set<logger::severity>>> _queues_streams;
 
-    static std::map<std::string, std::pair<int, int>> _queue;
+    static std::map<std::string, std::pair<mqd_t, int>> _queue;
 
 #elif _WINDOWS_
 

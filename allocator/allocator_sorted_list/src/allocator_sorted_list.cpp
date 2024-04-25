@@ -26,6 +26,9 @@ allocator_sorted_list &allocator_sorted_list::operator=(allocator_sorted_list &&
         other._trusted_memory = nullptr;
 
     }
+
+
+
     return *this;
 }
 
@@ -33,6 +36,8 @@ allocator_sorted_list &allocator_sorted_list::operator=(allocator_sorted_list &&
 
 allocator_sorted_list::~allocator_sorted_list()
 {
+    delete get_mutex();
+
     allocator* allocator = get_allocator();
     trace_with_guard(get_typename() + "allocator is deleted");
 
@@ -99,10 +104,11 @@ allocator_sorted_list::allocator_sorted_list(
 
     void **first_block_address_space_address = reinterpret_cast<void **>(mutex_space_address + 1);
     *first_block_address_space_address = reinterpret_cast<void *>(first_block_address_space_address + 1);
+
     auto metadata = sizeof(void*) + sizeof(size_t);
 
     *reinterpret_cast<size_t *>(*first_block_address_space_address) = space_size - metadata;
-    *reinterpret_cast<void** >(reinterpret_cast<size_t *>(*first_block_address_space_address) + 1) = nullptr;
+    *reinterpret_cast<void**>(reinterpret_cast<size_t *>(*first_block_address_space_address) + 1) = nullptr;
 
     if (logger != nullptr)
     {
@@ -234,6 +240,7 @@ allocator_sorted_list::allocator_sorted_list(
         }
         *address_to_next_free_block = _trusted_memory;
     }
+
     size_t size_before = *reinterpret_cast<size_t*>(reinterpret_cast<unsigned char *>(_trusted_memory) + sizeof(allocator *) + sizeof(logger *));
     size_t* size_space = reinterpret_cast<size_t*>(reinterpret_cast<unsigned char *>(_trusted_memory) + sizeof(allocator *) + sizeof(logger *));
     *size_space = size_before - requested_size - sizeof(size_t) - sizeof(void*);
@@ -290,8 +297,8 @@ void allocator_sorted_list::deallocate(void *at)
 
     void *current_free_block = get_first_aviable_block();
     void *prev_free_block = nullptr;
-    while (current_free_block != nullptr &&
-           current_free_block < target_block)
+
+    while (current_free_block != nullptr && current_free_block < target_block)
     {
         prev_free_block = current_free_block;
         current_free_block = get_aviable_block_next_block_address(current_free_block);
@@ -450,7 +457,7 @@ std::vector<allocator_test_utils::block_info> allocator_sorted_list::get_blocks_
         void* ptr_next_or_memory =*reinterpret_cast<void**>(reinterpret_cast<size_t *>(cur_block) + 1);
         value.is_block_occupied = (ptr_next_or_memory == _trusted_memory);
 
-        data.push_back(value);
+        data.push_back(std::move(value));
 
         cur_block = reinterpret_cast<void*>(reinterpret_cast<unsigned char *>(cur_block) + sizeof(size_t) + sizeof(void*) + value.block_size);
         current_size = current_size + sizeof(size_t) + sizeof(void* ) + value.block_size;

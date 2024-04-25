@@ -125,6 +125,8 @@ private:
     void insert(void* target_block) noexcept;
 
     void fix_red_black_tree(void* target_block) noexcept;
+
+    void print_tree(void *block, size_t depth);
     
 };
 

@@ -87,20 +87,12 @@ void allocator_global_heap::deallocate(void *at)
 
     allocator* allocator_ptr;
 
-//    try
-//    {
-        allocator_ptr = *reinterpret_cast<allocator**>(block_size - 1);
-        if (allocator_ptr != this)
-        {
-            error_with_guard("ALLOCATOR_GLOBAL_HEAP: can't deallocate memory");
-            throw std::logic_error("ALLOCATOR_GLOBAL_HEAP: can't deallocate memory");
-        }
-//    }
-//    catch (const std::logic_error &ex)
-//    {
-//        error_with_guard("ALLOCATOR_GLOBAL_HEAP: can't deallocate memory");
-//        throw std::logic_error("ALLOCATOR_GLOBAL_HEAP: can't deallocate memory");
-//    }
+    allocator_ptr = *reinterpret_cast<allocator**>(block_size - 1);
+    if (allocator_ptr != this)
+    {
+        error_with_guard("ALLOCATOR_GLOBAL_HEAP: can't deallocate memory");
+        throw std::logic_error("ALLOCATOR_GLOBAL_HEAP: can't deallocate memory");
+    }
 
     ::operator delete(allocator_ptr);
 

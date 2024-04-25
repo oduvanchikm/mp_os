@@ -7,9 +7,7 @@
 #include <typename_holder.h>
 #include <logger_builder.h>
 #include "../../../logger/client_logger/include/client_logger.h"
-//#include "../../../logger/client_logger/include/client_logger_builder.h"
-//#include <client_logger.h>
-//#include <client_logger_builder.h>
+
 
 class allocator_global_heap final:
     public allocator,
@@ -35,13 +33,9 @@ public:
         allocator_global_heap const &other) = delete;
     
     allocator_global_heap(
-<<<<<<< HEAD
         allocator_global_heap &&other) noexcept = delete;
 
-=======
-        allocator_global_heap &&other) noexcept;
-    
->>>>>>> 5ade9435e0702eaa7d8713a809c05debdb627456
+
     allocator_global_heap &operator=(
         allocator_global_heap &&other) noexcept = delete;
 
@@ -67,11 +61,8 @@ private:
     
     inline std::string get_typename() const noexcept override;
 
-<<<<<<< HEAD
+
     std::string get_block_of_memory_state(void *at) const;
-=======
-public:
->>>>>>> 5ade9435e0702eaa7d8713a809c05debdb627456
 
 };
 
