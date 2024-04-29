@@ -122,7 +122,7 @@ private:
 
     void* get_first_fit(size_t size) const noexcept;
 
-    void insert(void* target_block) noexcept;
+    void insert(void* target_block, size_t size_target_block) noexcept;
 
     void fix_red_black_tree(void* target_block) noexcept;
 

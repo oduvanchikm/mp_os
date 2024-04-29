@@ -214,24 +214,26 @@ void* allocator_red_black_tree::get_right_subtree_block(void* block_address) con
     return reinterpret_cast<void*>(reinterpret_cast<unsigned char*>(block_address) + sizeof(unsigned char) + sizeof(unsigned char) + sizeof(void*) + sizeof(void*) + sizeof(size_t) + sizeof(void*) + sizeof(void*));
 }
 
-void allocator_red_black_tree::print_tree(void *block, size_t depth)
-{
-    if (block != nullptr)
-    {
-        print_tree(get_right_subtree_block(block), depth + 1);
-        for (size_t i = 0; i < depth; ++i)
-        {
-            std::cout << '\t';
-        }
-
-        std::cout << get_size_block(block) << " " << (get_colour_block(block) == 1) << " " << get_is_occupied_block(block) << std::endl;
-
-        print_tree(get_left_subtree_block(block), depth + 1);
-    }
-}
+//void allocator_red_black_tree::print_tree(void *block, size_t depth)
+//{
+//    if (block != nullptr)
+//    {
+//        print_tree(get_right_subtree_block(block), depth + 1);
+//        for (size_t i = 0; i < depth; ++i)
+//        {
+//            std::cout << '\t';
+//        }
+//
+//        std::cout << get_size_block(block) << " " << (get_colour_block(block) == 1) << " " << get_is_occupied_block(block) << std::endl;
+//
+//        print_tree(get_left_subtree_block(block), depth + 1);
+//    }
+//}
 
 void allocator_red_black_tree::delete_block(void* target_block) noexcept
 {
+    std::cout << "opopopopp my na puti k uspechu" << std::endl;
+
     bool flag_black_tree = false;
 
     if (get_left_subtree_block(target_block) == nullptr && get_right_subtree_block(target_block) == nullptr)
@@ -514,6 +516,10 @@ void* allocator_red_black_tree::get_best_fit(size_t size) const noexcept
         {
             current_block_size = get_size_block(current_block);
         }
+        else
+        {
+            break;
+        }
     }
 
     if (current_block == nullptr)
@@ -521,7 +527,7 @@ void* allocator_red_black_tree::get_best_fit(size_t size) const noexcept
         return nullptr;
     }
 
-    while (get_left_subtree_block(current_block))
+    while (get_left_subtree_block(current_block) != nullptr)
     {
         void* left_subtree = get_left_subtree_block(current_block);
         size_t size_left_subtree = get_size_block(left_subtree);
@@ -549,44 +555,44 @@ void* allocator_red_black_tree::get_worst_fit(size_t size) const noexcept
         return nullptr;
     }
 
-    while (current_block != nullptr)
+    while (get_right_subtree_block(current_block) != nullptr)
     {
-        size_t current_block_size = get_size_block(current_block);
-
-        if (current_block_size >= size)
-        {
-            previous_block = current_block;
-        }
-
         current_block = get_right_subtree_block(current_block);
     }
 
-    return previous_block;
+    size_t current_block_size = get_size_block(current_block);
+
+    if (current_block_size >= size)
+    {
+        return current_block;
+    }
+    else
+    {
+        return nullptr;
+    }
+
 }
 
 void* allocator_red_black_tree::get_first_fit(size_t size) const noexcept
 {
     void* current_block = get_root();
-    void* previous_block = nullptr;
 
     if (current_block == nullptr)
     {
         return nullptr;
     }
 
-    while (current_block != nullptr)
+    size_t current_block_size = get_size_block(current_block);
+
+    while (current_block && current_block_size < size)
     {
-        size_t current_block_size = get_size_block(current_block);
-
-        if (current_block_size >= size)
-        {
-            return current_block;
-        }
-
         current_block = get_right_subtree_block(current_block);
+        if (current_block)
+        {
+            current_block_size = get_size_block(current_block);
+        }
     }
-
-    return nullptr;
+    return current_block;
 }
 
 [[nodiscard]] void *allocator_red_black_tree::allocate(size_t value_size, size_t values_count)
@@ -606,8 +612,6 @@ void* allocator_red_black_tree::get_first_fit(size_t size) const noexcept
     std::cout << "Information about blocks of memory: " << std::to_string(requested_size) << std::endl;
 
     void *target_block = nullptr;
-    void *previous_to_target_block = get_previous_free_block(target_block);
-    void* next_to_target_block = get_next_free_block(target_block);
 
     switch (fit_mode)
     {
@@ -630,89 +634,70 @@ void* allocator_red_black_tree::get_first_fit(size_t size) const noexcept
         throw std::bad_alloc();
     }
 
-    size_t target_block_size = get_size_block(target_block);
+    std::cout << "guten morgen" << std::endl;
 
-    std::cout << "target block size: " << std::to_string(target_block_size) << std::endl;
+    void *previous_to_target_block = get_previous_free_block(target_block);
+    void* next_to_target_block = get_next_free_block(target_block);
+
+    size_t target_block_size = get_size_block(target_block);
 
     size_t blocks_sizes_difference = target_block_size - requested_size;
 
-    std::cout << "difference: " << std::to_string(blocks_sizes_difference) << std::endl;
-    std::cout << "small meta: " << std::to_string(get_small_free_metadata()) << std::endl;
+    std::cout << "diff " << blocks_sizes_difference;
 
     if (blocks_sizes_difference < get_small_free_metadata())
     {
         requested_size = target_block_size;
     }
 
-    *reinterpret_cast<unsigned char*>(target_block) = 1;
-
     if (requested_size != target_block_size)
     {
         void* remaining_block_from_target_block_size = reinterpret_cast<unsigned char*>(target_block) + get_small_free_metadata() + requested_size;
 
-        std::cout << "bytes1: " << target_block << std::endl;
-        std::cout << "bytes: " << remaining_block_from_target_block_size << std::endl;
+        void** previous_block_to_remaining_block_from_target_block_size = reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(remaining_block_from_target_block_size) + sizeof(unsigned char) + sizeof(unsigned char) + sizeof(void*));
+        *previous_block_to_remaining_block_from_target_block_size = target_block;
 
-        if (remaining_block_from_target_block_size == nullptr)
+        void** next_block_to_remaining_block_from_target_block_size = reinterpret_cast<void **>(reinterpret_cast<unsigned char*>(remaining_block_from_target_block_size) + sizeof(unsigned char) + sizeof(unsigned char));
+        *next_block_to_remaining_block_from_target_block_size = next_to_target_block;
+
+        if (next_to_target_block != nullptr)
         {
-            std::cout << "i hate programming" << std::endl;
+            void** previous_to_next_target_block = reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(next_to_target_block) + sizeof(unsigned char) + sizeof(unsigned char) + sizeof(void*));
+            *previous_to_next_target_block = remaining_block_from_target_block_size;
         }
 
-        *reinterpret_cast<size_t*>(reinterpret_cast<unsigned char*>(remaining_block_from_target_block_size) + sizeof(unsigned char) + sizeof(unsigned char) + sizeof(void*) + sizeof(void*)) = blocks_sizes_difference;
+        std::cout << "done" << std::endl;
 
-        size_t remaining_block_size_from_target_block_size = get_size_block(remaining_block_from_target_block_size);
+        size_t size_block = blocks_sizes_difference - get_small_free_metadata();
 
-        std::cout << "remaining " << std::to_string(remaining_block_size_from_target_block_size) << std::endl;
-
-        void** previous_to_remaining_block = reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(remaining_block_from_target_block_size) + sizeof(unsigned char) + sizeof(unsigned char) + sizeof(void*));
-        *previous_to_remaining_block = previous_to_target_block;
-
-        void** next_to_remaining_block = reinterpret_cast<void **>(reinterpret_cast<unsigned char*>(remaining_block_from_target_block_size) + sizeof(unsigned char) + sizeof(unsigned char));
-        *next_to_remaining_block = next_to_target_block;
-
-//        if (previous_to_target_block != nullptr)
-//        {
-//            void** next_to_previous_to_target_block = reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(previous_to_target_block) + sizeof(unsigned char) + sizeof(unsigned char));
-//            *next_to_previous_to_target_block = remaining_block_from_target_block_size;
-//        }
-//
-//        if (next_to_target_block != nullptr)
-//        {
-//            void** previous_to_next_target_block = reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(next_to_target_block) + sizeof(unsigned char) + sizeof(unsigned char) + sizeof(void*));
-//            *previous_to_next_target_block = remaining_block_from_target_block_size;
-//        }
-
-        std::cout << "hello" << std::endl;
-
-        insert(remaining_block_from_target_block_size);
-
-        std::cout << "hello" << std::endl;
-
-        print_tree(target_block, 4);
+        insert(remaining_block_from_target_block_size, size_block);
     }
+
+    std::cout << "done" << std::endl;
 
     delete_block(target_block);
 
-    print_tree(target_block, 4);
+    *reinterpret_cast<unsigned char*>(target_block) = 1;
 
     std::cout << "allocate has been great" << std::endl;
 
     return reinterpret_cast<unsigned char*>(target_block) + get_small_free_metadata();
 }
 
-void allocator_red_black_tree::insert(void* target_block) noexcept
+void allocator_red_black_tree::insert(void* target_block, size_t size_target_block) noexcept
 {
-    void* current_block = get_root();
+//    void* current_block = get_root();
+    void* current_block = *reinterpret_cast<void **>(reinterpret_cast<unsigned char *>(_trusted_memory) + sizeof(allocator *) + sizeof(logger *) + sizeof(size_t) + sizeof(size_t) + sizeof(allocator_with_fit_mode::fit_mode) + sizeof(std::mutex*));
     void* parent = nullptr;
-    std::cout << "hello" << std::endl;
 
-    size_t target_block_size = get_size_block(target_block);
+    std::cout << "h" << std::endl;
 
-    while(true)
+
+    while (true)
     {
         parent = current_block;
 
-        if (target_block_size < get_size_block(current_block))
+        if (size_target_block < get_size_block(current_block))
         {
             current_block = get_left_subtree_block(current_block);
         }
@@ -734,11 +719,24 @@ void allocator_red_black_tree::insert(void* target_block) noexcept
 
     *reinterpret_cast<unsigned char*>(target_block) = 0;
     *reinterpret_cast<unsigned char*>(reinterpret_cast<unsigned char*>(target_block) + sizeof(unsigned char)) = 1;
+
     std::cout << "hello3" << std::endl;
-    *reinterpret_cast<size_t*>(reinterpret_cast<unsigned char*>(target_block) + sizeof(unsigned char) + sizeof(unsigned char) + sizeof(void*) + sizeof(void*)) = get_size_block(target_block);
+
+    *reinterpret_cast<size_t*>(reinterpret_cast<unsigned char*>(target_block) + sizeof(unsigned char) + sizeof(unsigned char) + sizeof(void*) + sizeof(void*)) = size_target_block;
     *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(target_block) + sizeof(unsigned char) + sizeof(unsigned char) + sizeof(void*) + sizeof(void*) + sizeof(size_t)) = parent;
     *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(target_block) + sizeof(unsigned char) + sizeof(unsigned char) + sizeof(void*) + sizeof(void*) + sizeof(size_t) + sizeof(void*)) = nullptr;
     *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(target_block) + sizeof(unsigned char) + sizeof(unsigned char) + sizeof(void*) + sizeof(void*) + sizeof(size_t) + sizeof(void*) + sizeof(void*)) = nullptr;
+
+    if (size_target_block < get_size_block(parent))
+    {
+        void** left_subtree = reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(parent) + sizeof(unsigned char) + sizeof(unsigned char) + sizeof(void*) + sizeof(void*) + sizeof(size_t) + sizeof(void*));
+        *left_subtree = target_block;
+    }
+    else
+    {
+        void** right_subtree = reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(parent) + sizeof(unsigned char) + sizeof(unsigned char) + sizeof(void*) + sizeof(void*) + sizeof(size_t) + sizeof(void*) + sizeof(void*));
+        *right_subtree = target_block;
+    }
 
     std::cout << "hello3" << std::endl;
     fix_red_black_tree(target_block);
@@ -835,7 +833,7 @@ void allocator_red_black_tree::deallocate(void *at)
 
     // TODO хз как закончить
 
-    insert(target_block);
+    insert(target_block, target_block_size);
 
 
 }
@@ -847,7 +845,32 @@ inline void allocator_red_black_tree::set_fit_mode(allocator_with_fit_mode::fit_
 
 std::vector<allocator_test_utils::block_info> allocator_red_black_tree::get_blocks_info() const noexcept
 {
-    // TODO хз че тут писать
+    std::vector<allocator_test_utils::block_info> data;
+//
+//    void** current_block_l = reinterpret_cast<void **>(reinterpret_cast<unsigned char *>(_trusted_memory) + sizeof(allocator *) + sizeof(logger *) + sizeof(size_t) + sizeof(size_t) + sizeof(std::mutex*) + sizeof(allocator_with_fit_mode::fit_mode));
+//    void* current_block = reinterpret_cast<void **>(current_block_l + 1);
+//
+//    while(current != nullptr)
+//    {
+//        allocator_test_utils::block_info value;
+//        value.is_block_occupied = is_occupied_block(current);
+//        if (value.is_block_occupied)
+//        {
+//            if (get_next_block(current) == nullptr)
+//            {
+//                value.block_size = reinterpret_cast<char *>(_trusted_memory) + get_ancillary_space_size(nullptr) + get_all_size() - reinterpret_cast<char *>(current) - get_meta_size_occupied_block();
+//            }
+//            else value.block_size = reinterpret_cast<char *>(get_next_block(current)) - reinterpret_cast<char *>(current) - get_meta_size_occupied_block();
+//        }
+//        else
+//        {
+//            value.block_size = get_size_aviable_block(current);
+//        }
+//        data.push_back(value);
+//        //std::cout << std::to_string(value.block_size) << std::endl;
+//        current = get_next_block(current);
+//    }
+    return data;
 }
 
 inline std::string allocator_red_black_tree::get_typename() const noexcept

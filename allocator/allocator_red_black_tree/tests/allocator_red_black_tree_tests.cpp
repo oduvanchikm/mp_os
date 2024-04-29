@@ -30,7 +30,8 @@ logger *create_logger(
     return built_logger;
 }
 
-TEST(positive_tests, test1) {
+TEST(positive_tests, test1)
+{
     //TODO: logger
     logger *logger = create_logger(std::vector<std::pair<std::string, logger::severity>>
                                            {
@@ -45,12 +46,12 @@ TEST(positive_tests, test1) {
 
     auto second_block = reinterpret_cast<char *>(alloc->allocate(sizeof(int), 25));
 
-    //alloc->deallocate(first_block);
+//    alloc->deallocate(first_block);
 
     // first_block = reinterpret_cast<int *>(alloc->allocate(sizeof(int), 245));
 
 
-    // alloc->deallocate(second_block);
+//     alloc->deallocate(second_block);
     // alloc->deallocate(first_block);
 
     // //TODO: Проверка
