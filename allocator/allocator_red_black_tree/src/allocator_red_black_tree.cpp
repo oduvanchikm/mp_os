@@ -16,7 +16,6 @@ allocator_red_black_tree::~allocator_red_black_tree()
     }
 }
 
-
 allocator_red_black_tree::allocator_red_black_tree(
         size_t space_size,
         allocator *parent_allocator,
@@ -130,13 +129,19 @@ allocator_red_black_tree::allocator_red_black_tree(
 
     size_t requested_size = value_size * values_count;
 
+    std::cout << requested_size << std::endl;
+
     if (requested_size < get_meta_size_occupied_block())
     {
         warning_with_guard(get_typename() + "requested size has changed");
         requested_size = get_meta_size_occupied_block();
     }
 
+    std::cout << get_meta_size_occupied_block() << std::endl;
+
     allocator_with_fit_mode::fit_mode fit_mode = get_fit_mode();
+
+    std::cout << "hi" << std::endl;
 
     void* target_block = nullptr;
 
@@ -147,13 +152,17 @@ allocator_red_black_tree::allocator_red_black_tree(
             break;
 
         case allocator_with_fit_mode::fit_mode::the_best_fit:
+            std::cout << "hi" << std::endl;
             target_block = get_best_fit(requested_size);
+            std::cout << "hi" << std::endl;
             break;
 
         case allocator_with_fit_mode::fit_mode::first_fit:
             target_block = get_first_fit(requested_size);
             break;
     }
+
+//    std::cout << "hi" << std::endl;
 
     if (target_block == nullptr)
     {
@@ -164,6 +173,8 @@ allocator_red_black_tree::allocator_red_black_tree(
 
     void* next_to_target_block = get_next_block(target_block);
     void* prev_to_target_block = get_previous_block(target_block);
+
+    std::cout << "bobobobo " << get_size_aviable_block(target_block) << std::endl;
 
     auto size_target_block = get_size_aviable_block(target_block) + get_meta_size_aviable_block() - sizeof(void*) * 3 - sizeof(bool);
 
@@ -231,7 +242,123 @@ void allocator_red_black_tree::deallocate(void *at)
         return;
     }
 
+    void *target_block = reinterpret_cast<void*>(reinterpret_cast<char *>(at) - sizeof(void*) * 3 - sizeof(bool));
 
+    void* pointer = *reinterpret_cast<void**>(reinterpret_cast<char *>(target_block) + sizeof(void*) + sizeof(void*) + sizeof(bool));
+
+    if (pointer != _trusted_memory)
+    {
+        error_with_guard(get_typename() + "block doesn't belong this allocator!");
+        throw std::logic_error("block doesn't belong this allocator!");
+    }
+
+    size_t size_target_block;
+
+    void* next_block = get_next_block(target_block);
+    void* prev_block = get_previous_block(target_block);
+
+    if (next_block == nullptr)
+    {
+        size_target_block = reinterpret_cast<char*>(_trusted_memory) + get_ancillary_space_size() + get_all_size() - reinterpret_cast<char*>(at);
+    }
+
+    else size_target_block = reinterpret_cast<char*>(next_block) - reinterpret_cast<char*>(at);
+
+    std::string result;
+
+    auto* bytes = reinterpret_cast<unsigned char*>(at);
+
+    for (int i = 0; i < size_target_block; i++)
+    {
+        result += std::to_string(static_cast<int>(bytes[i])) + " ";
+    }
+
+    size_t clear_size_target_without_meta_for_free = size_target_block + get_meta_size_occupied_block() - get_meta_size_aviable_block();
+
+    bool done = 0;
+
+    if (next_block && !is_occupied_block(next_block))
+    {
+        size_t size_next_block = get_size_aviable_block(next_block);
+        size_t size_next_with_meta = size_next_block + get_meta_size_aviable_block();
+        size_t new_size_target = clear_size_target_without_meta_for_free + size_next_with_meta;
+
+        dispose_block_from_red_black_tree(next_block);
+        insert_block_in_red_black_tree(target_block, new_size_target);
+
+        void* next_next_block = get_next_block(next_block);
+        void** ptr_this_next = reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(target_block) + sizeof(void*));
+
+        *ptr_this_next = next_next_block;
+
+        if (next_next_block != nullptr)
+        {
+            void **ptr_next_to_this = reinterpret_cast<void**>(next_next_block);
+            *ptr_next_to_this = target_block;
+        }
+
+        done = 1;
+
+        clear_size_target_without_meta_for_free = new_size_target;
+    }
+
+    if (prev_block && !is_occupied_block(prev_block))
+    {
+        size_t size_prev_block = get_size_aviable_block(prev_block);
+
+        size_t new_size_target = clear_size_target_without_meta_for_free + size_prev_block + get_meta_size_aviable_block();
+        if (!is_occupied_block(target_block))
+        {
+            dispose_block_from_red_black_tree(target_block);
+        }
+
+        dispose_block_from_red_black_tree(prev_block);
+        insert_block_in_red_black_tree(prev_block, new_size_target);
+
+        next_block = get_next_block(target_block);
+
+        void** ptr_this_next = reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(prev_block) + sizeof(void*));
+        *ptr_this_next = next_block;
+
+        if (next_block != nullptr)
+        {
+            void **ptr_next_to_this = reinterpret_cast<void**>(next_block);
+            *ptr_next_to_this = prev_block;
+        }
+
+        debug_with_guard(get_typename() + "finish dellocate memory");
+
+        std::vector<allocator_test_utils::block_info> data = get_blocks_info();
+
+        std::string data_str;
+
+        for (block_info value : data)
+        {
+            std::string is_oc = value.is_block_occupied ? "YES" : "NO";
+            data_str += (is_oc + "  " + std::to_string(value.block_size) + " | ");
+        }
+        debug_with_guard(get_typename() + "state blocks: " + data_str);
+
+        return;
+    }
+
+    if (!done)
+    {
+        insert_block_in_red_black_tree(target_block, clear_size_target_without_meta_for_free);
+    }
+
+    std::vector<allocator_test_utils::block_info> data = get_blocks_info();
+    std::string data_str;
+
+    for (block_info value : data)
+    {
+        std::string is_oc = value.is_block_occupied ? "YES" : "NO";
+        data_str += (is_oc + "  " + std::to_string(value.block_size) + " | ");
+    }
+
+    debug_with_guard(get_typename() + "state blocks: " + data_str);
+
+    trace_with_guard(get_typename() + "deallocate method has finished");
 }
 
 inline void allocator_red_black_tree::set_fit_mode(
@@ -294,17 +421,6 @@ size_t allocator_red_black_tree::get_meta_size_occupied_block() const noexcept
     return sizeof(void*) * 3 + sizeof(bool);
 }
 
-void allocator_red_black_tree::log_with_guard_my(
-        std::string const &message,
-        logger::severity severity) const
-{
-    logger *got_logger = get_logger();
-    if (got_logger != nullptr)
-    {
-        got_logger->log(message, severity);
-    }
-}
-
 void* allocator_red_black_tree::get_previous_block(void* block) const
 {
     return *reinterpret_cast<void**>(block);
@@ -347,31 +463,44 @@ void* allocator_red_black_tree::get_right_subtree_block(void* block) const
 
 void allocator_red_black_tree::change_color(void* block)
 {
-    bool* is_red = reinterpret_cast<bool*>(reinterpret_cast<unsigned char*>(block) + sizeof(void*) + sizeof(void*) + sizeof(bool) + sizeof(size_t));
-    (*is_red) ? *is_red = 0 : *is_red = 1;
+    bool* is_red_color_block = reinterpret_cast<bool*>(reinterpret_cast<unsigned char*>(block) + sizeof(void*) + sizeof(void*) + sizeof(bool) + sizeof(size_t));
+    (*is_red_color_block) ? *is_red_color_block = 0 : *is_red_color_block = 1;
 }
 
 void* allocator_red_black_tree::get_best_fit(size_t size)
 {
+    trace_with_guard(get_typename() + "get_best_fit has started");
     void* current = get_root();
-    if (!current) return nullptr;
-    auto current_block_size = get_size_aviable_block(current) + get_meta_size_aviable_block() - sizeof(void*) * 3 - sizeof(bool);
+
+    if (!current)
+    {
+        return nullptr;
+    }
+
+    std::cout << get_size_aviable_block(current) << std::endl;
+
+    size_t current_block_size = get_size_aviable_block(current) + get_meta_size_aviable_block() - sizeof(void*) * 3 - sizeof(bool);
+    std::cout << current_block_size << std::endl;
+
     while (current_block_size < size)
     {
         current = get_right_subtree_block(current);
         if (current)
         {
             current_block_size = get_size_aviable_block(current) + get_meta_size_aviable_block() - sizeof(void*) * 3 - sizeof(bool);
+            std::cout << "b " << current_block_size << std::endl;
         }
         else
         {
             break;
         }
     }
+
     if (!current)
     {
         return nullptr;
     }
+
     while(get_left_subtree_block(current) != nullptr)
     {
         void* left = get_left_subtree_block(current);
@@ -385,45 +514,43 @@ void* allocator_red_black_tree::get_best_fit(size_t size)
             break;
         }
     }
+
     return current;
 }
 
 void* allocator_red_black_tree::get_worst_fit(size_t size)
 {
-    log_with_guard_my("get_worst_fit start", logger::severity::trace);
+    trace_with_guard(get_typename() + "get_worst_fit has started");
+
     void* current = get_root();
+
     while (get_right_subtree_block(current))
     {
         current = get_right_subtree_block(current);
     }
+
     size_t current_block_size = reinterpret_cast<size_t>(reinterpret_cast<unsigned char*>(current) + get_size_aviable_block(current) + get_meta_size_aviable_block() - sizeof(void*) * 3 - sizeof(bool));
+
     return (current_block_size >= size) ? current : nullptr;
 }
 void* allocator_red_black_tree::get_first_fit(size_t size)
 {
-    log_with_guard_my("get_first_fit start", logger::severity::trace);
+    trace_with_guard(get_typename() + "get_first_fit has started");
+
     void* current = get_root();
+
     size_t current_block_size = reinterpret_cast<size_t>(reinterpret_cast<unsigned char*>(current) + get_size_aviable_block(current) + get_meta_size_aviable_block() - sizeof(void*) * 3 - sizeof(bool));
+
     while (current && current_block_size < size)
     {
         current = get_right_subtree_block(current);
-        if (current) current_block_size = reinterpret_cast<size_t>(reinterpret_cast<unsigned char*>(current) + get_size_aviable_block(current) + get_meta_size_aviable_block() - sizeof(void*) * 3 - sizeof(bool));
+
+        if (current)
+        {
+            current_block_size = reinterpret_cast<size_t>(reinterpret_cast<unsigned char*>(current) + get_size_aviable_block(current) + get_meta_size_aviable_block() - sizeof(void*) * 3 - sizeof(bool));
+        }
     }
     return current;
-}
-void* allocator_red_black_tree::get_uncle(void* block)
-{
-    log_with_guard_my("get_uncle start", logger::severity::trace);
-    void* parent = get_parent(block);
-    if (!parent) return nullptr;
-    void *grandpa = get_parent(parent);
-    if (!grandpa)
-        return nullptr;
-    if (get_left_subtree_block(grandpa) == parent)
-    {
-        return get_right_subtree_block(grandpa);
-    }
-    return get_left_subtree_block(grandpa);
 }
 
 //-------------------------------------------------INSERT------------------------------------------------------
@@ -488,12 +615,15 @@ void allocator_red_black_tree::fix_red_black_tree_after_insert(void* target_bloc
 
     void* parent_to_target_block = get_parent(target_block);
 
+    std::cout << "hohohohhohohohohoh" << std::endl;
+
     if (parent_to_target_block == nullptr)
     {
         if (is_color_red(target_block))
         {
             change_color(target_block);
         }
+
         std::cout << get_typename() + "target block is root, color is black" << std::endl;
 
         trace_with_guard(get_typename() + "fix tree after insert method has finished");
@@ -510,7 +640,12 @@ void allocator_red_black_tree::fix_red_black_tree_after_insert(void* target_bloc
         return;
     }
 
+    std::cout << "tell me why it sooo difficult difficult" << std::endl;
+
     void* grandparent_to_target_block = get_parent(parent_to_target_block);
+//    void* grandparent_to_target_block = *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(parent_to_target_block) + sizeof(void*) + sizeof(void*) + sizeof(bool) + sizeof(size_t) + sizeof(bool));
+
+    std::cout << "difficult" << std::endl;
 
     void* uncle_to_target_block = nullptr;
 
@@ -631,11 +766,31 @@ void allocator_red_black_tree::dispose_block_from_red_black_tree(void* target_bl
 
         if (!is_red_color_block)
         {
-            void *child_to_target_block = (get_left_subtree_block(target_block) != nullptr) ? get_left_subtree_block(
-                    target_block) : get_right_subtree_block(target_block);
+//            void *child_to_target_block = (get_left_subtree_block(target_block) != nullptr) ? get_left_subtree_block(
+//                    target_block) : get_right_subtree_block(target_block);
 
-            change_color(target_block);
-            change_color(child_to_target_block);
+            void *child_to_target_block = nullptr;
+
+            if (get_left_subtree_block(target_block) != nullptr)
+            {
+                child_to_target_block = get_left_subtree_block(target_block);
+            }
+            if (get_right_subtree_block(target_block) != nullptr)
+            {
+                child_to_target_block = get_right_subtree_block(target_block);
+            }
+
+//            bool color_child = reinterpret_cast<bool*>(reinterpret_cast<unsigned char*>(child_to_target_block) + sizeof(void*) + sizeof(void*) + sizeof(bool) + sizeof(size_t));
+
+            bool* color_child_ptr = reinterpret_cast<bool*>(reinterpret_cast<unsigned char*>(child_to_target_block) + sizeof(void*) + sizeof(void*) + sizeof(bool) + sizeof(size_t));
+            *color_child_ptr = 0;
+
+            std::cout << "child " << *color_child_ptr << std::endl;
+
+            bool* color_target_block = reinterpret_cast<bool*>(reinterpret_cast<unsigned char*>(child_to_target_block) + sizeof(void*) + sizeof(void*) + sizeof(bool) + sizeof(size_t));
+            *color_target_block = 1;
+
+            std::cout << "target " << *color_target_block << std::endl;
 
             if (parent_to_target_block != nullptr)
             {
@@ -754,52 +909,122 @@ void allocator_red_black_tree::fix_red_black_tree_after_dispose(void* target_blo
     trace_with_guard(get_typename() + "fix red black tree after dispose has started");
     std::cout << get_typename() + "fix red black tree after dispose has started" << std::endl;
 
-    void* parent = get_parent(target_block);
-
-    if (target_block == nullptr || parent == nullptr)
+    if (target_block == nullptr || get_parent(target_block) == nullptr)
     {
         return;
     }
 
-    void* brother_to_target_block = (is_left_child) ? get_right_subtree_block(parent) : get_left_subtree_block(parent);
+    void* parent_to_target_block = get_parent(target_block);
+    void* brother_to_target_block = (is_left_child) ? get_right_subtree_block(parent_to_target_block) : get_left_subtree_block(parent_to_target_block);
 
-    void* left_child_to_brother_to_target_block = get_left_subtree_block(brother_to_target_block);
-    void* right_child_to_brother_to_target_block = get_right_subtree_block(brother_to_target_block);
-
-    if (is_color_red(parent))
+    if (!is_color_red(brother_to_target_block))
     {
-        if (is_color_red(left_child_to_brother_to_target_block) || is_color_red(right_child_to_brother_to_target_block))
+        void* left_child_to_brother_to_target_block = get_left_subtree_block(brother_to_target_block);
+        void* right_child_to_brother_to_target_block = get_right_subtree_block(brother_to_target_block);
+
+        if ((left_child_to_brother_to_target_block != nullptr && is_color_red(left_child_to_brother_to_target_block) ||
+                (right_child_to_brother_to_target_block != nullptr && is_color_red(right_child_to_brother_to_target_block))))
         {
-            left_rotate(brother_to_target_block);
-            right_rotate(parent);
-            change_color(parent);
+            if (is_left_child)
+            {
+                if (right_child_to_brother_to_target_block != nullptr && is_color_red(right_child_to_brother_to_target_block))
+                {
+                    if (is_color_red(brother_to_target_block) != is_color_red(parent_to_target_block))
+                    {
+                        change_color(brother_to_target_block);
+                    }
+
+                    change_color(right_child_to_brother_to_target_block);
+                    change_color(parent_to_target_block);
+                    left_rotate(parent_to_target_block);
+
+                    return;
+                }
+                if ((left_child_to_brother_to_target_block != nullptr && is_color_red(left_child_to_brother_to_target_block) &&
+                        (right_child_to_brother_to_target_block != nullptr && !is_color_red(right_child_to_brother_to_target_block))))
+                {
+                    change_color(brother_to_target_block);
+                    change_color(left_child_to_brother_to_target_block);
+                    right_rotate(brother_to_target_block);
+                    fix_red_black_tree_after_dispose(target_block, is_left_child);
+                }
+            }
+            else
+            {
+                if (left_child_to_brother_to_target_block != nullptr && is_color_red(left_child_to_brother_to_target_block))
+                {
+                    if (is_color_red(brother_to_target_block) != is_color_red(parent_to_target_block))
+                    {
+                        change_color(brother_to_target_block);
+                    }
+
+                    change_color(left_child_to_brother_to_target_block);
+                    change_color(parent_to_target_block);
+                    right_rotate(parent_to_target_block);
+                    return;
+                }
+                if ((right_child_to_brother_to_target_block != nullptr && is_color_red(right_child_to_brother_to_target_block) &&
+                        (left_child_to_brother_to_target_block != nullptr && !is_color_red(left_child_to_brother_to_target_block))))
+                {
+                    change_color(brother_to_target_block);
+                    change_color(right_child_to_brother_to_target_block);
+                    left_rotate(brother_to_target_block);
+                    fix_red_black_tree_after_dispose(target_block, is_left_child);
+                }
+            }
         }
-        else if (!is_color_red(left_child_to_brother_to_target_block) || !is_color_red(right_child_to_brother_to_target_block))
+        if ((left_child_to_brother_to_target_block != nullptr && !is_color_red(left_child_to_brother_to_target_block) &&
+                (right_child_to_brother_to_target_block != nullptr && !is_color_red(right_child_to_brother_to_target_block))))
         {
-            change_color(parent);
             change_color(brother_to_target_block);
-            fix_red_black_tree_after_dispose(target_block, is_left_child);
+            if (is_color_red(parent_to_target_block))
+            {
+                change_color(parent_to_target_block);
+                return;
+            }
+            else
+            {
+                if (is_left_child)
+                {
+                    void *grandpa = get_parent(parent_to_target_block);
+                    if (grandpa && get_left_subtree_block(grandpa) == parent_to_target_block)
+                    {
+                        fix_red_black_tree_after_dispose(parent_to_target_block, 1);
+                    }
+                    else if (grandpa)
+                    {
+                        fix_red_black_tree_after_dispose(parent_to_target_block, 0);
+                    }
+                }
+                else
+                {
+                    void *grandpa = get_parent(parent_to_target_block);
+                    if (grandpa && get_right_subtree_block(grandpa) == parent_to_target_block)
+                    {
+                        fix_red_black_tree_after_dispose(parent_to_target_block, 1);
+                    }
+                    else if (grandpa)
+                    {
+                        fix_red_black_tree_after_dispose(parent_to_target_block, 0);
+                    }
+                }
+            }
         }
     }
     else
     {
-        if (is_color_red(brother_to_target_block))
+        change_color(parent_to_target_block);
+        change_color(brother_to_target_block);
+        if (is_left_child)
         {
-            if (!is_color_red(left_child_to_brother_to_target_block) || !is_color_red(right_child_to_brother_to_target_block))
-            {
-
-            }
-
+            left_rotate(parent_to_target_block);
+            fix_red_black_tree_after_dispose(target_block, 1);
         }
-        else
-        {
-
+        else {
+            right_rotate(parent_to_target_block);
+            fix_red_black_tree_after_dispose(target_block, 0);
         }
-
     }
-
-
-
 }
 
 //----------------------------------------------------ROTATE------------------------------------------------------------
@@ -853,11 +1078,13 @@ void allocator_red_black_tree::right_rotate(void* block)
     std::cout << get_typename() + "start right rotate" << std::endl;
 
     void* parent_old_root = get_parent(block);
+
     void *new_root =  get_left_subtree_block(block);
+
     void* right_root_child = get_right_subtree_block(new_root);
+
     void** left_child_block = reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(block) + sizeof(void*) + sizeof(void*) + sizeof(bool) + sizeof(size_t) + sizeof(bool) + sizeof(void*));
     *left_child_block = right_root_child;
-
 
     if (right_root_child)
     {
@@ -866,8 +1093,8 @@ void allocator_red_black_tree::right_rotate(void* block)
 
     void** right_child_new_root = reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(block) + sizeof(void*) + sizeof(void*) + sizeof(bool) + sizeof(size_t) + sizeof(bool) + sizeof(void*) + sizeof(void*));
     *right_child_new_root = block;
-    *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(block) + sizeof(void*) + sizeof(void*) + sizeof(bool) + sizeof(size_t) + sizeof(bool)) = new_root;
 
+    *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(block) + sizeof(void*) + sizeof(void*) + sizeof(bool) + sizeof(size_t) + sizeof(bool)) = new_root;
 
     *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(new_root) + sizeof(void*) + sizeof(void*) + sizeof(bool) + sizeof(size_t) + sizeof(bool)) = parent_old_root;
 

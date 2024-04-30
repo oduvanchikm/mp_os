@@ -44,19 +44,18 @@ TEST(positive_tests, test1)
 
     auto first_block = reinterpret_cast<int *>(alloc->allocate(sizeof(int), 250));
 
-//    auto second_block = reinterpret_cast<char *>(alloc->allocate(sizeof(int), 25));
-
     alloc->deallocate(first_block);
 
-    // first_block = reinterpret_cast<int *>(alloc->allocate(sizeof(int), 245));
+//    auto second_block = reinterpret_cast<char *>(alloc->allocate(sizeof(int), 25));
+
+
 
 
 //     alloc->deallocate(second_block);
-    // alloc->deallocate(first_block);
 
-    // //TODO: Проверка
 
-    // delete alloc;
+
+     delete alloc;
 }
 
 int main(

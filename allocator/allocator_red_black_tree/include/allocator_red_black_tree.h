@@ -94,8 +94,6 @@ private:
 
     static void change_color(void* block);
 
-    void* get_uncle(void* block);
-
     void* get_worst_fit(size_t requested_size);
 
     void* get_best_fit(size_t requested_size);
@@ -127,12 +125,6 @@ private:
 private:
 
     inline std::string get_typename() const noexcept override;
-
-private:
-
-    void log_with_guard_my(
-            std::string const &message,
-            logger::severity severity) const;
 
 };
 
