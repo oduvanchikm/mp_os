@@ -42,11 +42,11 @@ TEST(positive_tests, test1)
     allocator *alloc = new allocator_red_black_tree(3000, nullptr, logger, allocator_with_fit_mode::fit_mode::the_best_fit);
 
 
-//    auto first_block = reinterpret_cast<int *>(alloc->allocate(sizeof(int), 250));
+    auto first_block = reinterpret_cast<int *>(alloc->allocate(sizeof(int), 250));
 
-    auto second_block = reinterpret_cast<char *>(alloc->allocate(sizeof(int), 25));
+//    auto second_block = reinterpret_cast<char *>(alloc->allocate(sizeof(int), 25));
 
-//    alloc->deallocate(first_block);
+    alloc->deallocate(first_block);
 
     // first_block = reinterpret_cast<int *>(alloc->allocate(sizeof(int), 245));
 
