@@ -749,104 +749,57 @@ void allocator_red_black_tree::dispose_block_from_red_black_tree(void* target_bl
 
 }
 
-void allocator_red_black_tree::fix_red_black_tree_after_dispose(void* block, bool is_left_child)
+void allocator_red_black_tree::fix_red_black_tree_after_dispose(void* target_block, bool is_left_child)
 {
     trace_with_guard(get_typename() + "fix red black tree after dispose has started");
     std::cout << get_typename() + "fix red black tree after dispose has started" << std::endl;
 
-    if (block == nullptr || get_parent(block) == nullptr || is_color_red(block)) return; //check
-    void* parent = get_parent(block);
-    void* brother = (is_left_child) ? get_right_subtree_block(parent) : get_left_subtree_block(parent);
-    if (brother == nullptr) {};//todo
+    void* parent = get_parent(target_block);
 
-    if (!is_color_red(brother))
+    if (target_block == nullptr || parent == nullptr)
     {
-        void* left_child_brother = get_left_subtree_block(brother);
-        void* right_child_brother = get_right_subtree_block(brother);
-        if ((left_child_brother != nullptr && is_color_red(left_child_brother) || (right_child_brother != nullptr && is_color_red(right_child_brother))))
+        return;
+    }
+
+    void* brother_to_target_block = (is_left_child) ? get_right_subtree_block(parent) : get_left_subtree_block(parent);
+
+    void* left_child_to_brother_to_target_block = get_left_subtree_block(brother_to_target_block);
+    void* right_child_to_brother_to_target_block = get_right_subtree_block(brother_to_target_block);
+
+    if (is_color_red(parent))
+    {
+        if (is_color_red(left_child_to_brother_to_target_block) || is_color_red(right_child_to_brother_to_target_block))
         {
-            if (is_left_child)
-            {
-                if (right_child_brother != nullptr && is_color_red(right_child_brother))
-                { // parent = null ?
-                    if (is_color_red(brother) != is_color_red(parent))
-                        change_color(brother);
-                    change_color(right_child_brother);
-                    change_color(parent);
-                    left_rotate(parent);
-                    return;
-                }
-                if ((left_child_brother != nullptr && is_color_red(left_child_brother) && (right_child_brother != nullptr && !is_color_red(right_child_brother))))
-                {
-                    change_color(brother);
-                    change_color(left_child_brother);
-                    right_rotate(brother);
-                    fix_red_black_tree_after_dispose(block, is_left_child);
-                }
-            }
-            else
-            {
-                if (left_child_brother != nullptr && is_color_red(left_child_brother))
-                { // parent = null ?
-                    if (is_color_red(brother) != is_color_red(parent))
-                        change_color(brother);
-                    change_color(left_child_brother);
-                    change_color(parent);
-                    right_rotate(parent);
-                    return;
-                }
-                if ((right_child_brother != nullptr && is_color_red(right_child_brother) && (left_child_brother != nullptr && !is_color_red(left_child_brother))))
-                {
-                    change_color(brother);
-                    change_color(right_child_brother);
-                    left_rotate(brother);
-                    fix_red_black_tree_after_dispose(block, is_left_child);
-                }
-            }
+            left_rotate(brother_to_target_block);
+            right_rotate(parent);
+            change_color(parent);
         }
-        if ((left_child_brother != nullptr && !is_color_red(left_child_brother) && (right_child_brother != nullptr && !is_color_red(right_child_brother))))
-        {//parent = null?
-            change_color(brother);
-            if (is_color_red(parent))
-            {
-                change_color(parent);
-                return;
-            }
-            else
-            {
-                if (is_left_child)
-                {
-                    void *grandpa = get_parent(parent);
-                    if (grandpa && get_left_subtree_block(grandpa) == parent)
-                        fix_red_black_tree_after_dispose(parent, 1);
-                    else if (grandpa)
-                        fix_red_black_tree_after_dispose(parent, 0);
-                }
-                else
-                {
-                    void *grandpa = get_parent(parent);
-                    if (grandpa && get_right_subtree_block(grandpa) == parent)
-                        fix_red_black_tree_after_dispose(parent, 1);
-                    else if (grandpa)
-                        fix_red_black_tree_after_dispose(parent, 0);
-                }
-            }
+        else if (!is_color_red(left_child_to_brother_to_target_block) || !is_color_red(right_child_to_brother_to_target_block))
+        {
+            change_color(parent);
+            change_color(brother_to_target_block);
+            fix_red_black_tree_after_dispose(target_block, is_left_child);
         }
     }
     else
     {
-        change_color(parent);
-        change_color(brother);
-        if (is_left_child)
+        if (is_color_red(brother_to_target_block))
         {
-            left_rotate(parent);
-            fix_red_black_tree_after_dispose(block, 1);
+            if (!is_color_red(left_child_to_brother_to_target_block) || !is_color_red(right_child_to_brother_to_target_block))
+            {
+
+            }
+
         }
-        else {
-            right_rotate(parent);
-            fix_red_black_tree_after_dispose(block, 0);
+        else
+        {
+
         }
+
     }
+
+
+
 }
 
 //----------------------------------------------------ROTATE------------------------------------------------------------
