@@ -1,12 +1,13 @@
 #ifndef MATH_PRACTICE_AND_OPERATING_SYSTEMS_RED_BLACK_TREE_H
 #define MATH_PRACTICE_AND_OPERATING_SYSTEMS_RED_BLACK_TREE_H
-
 #include <binary_search_tree.h>
+#include <logger_guardant.h>
 
-template<typename tkey, typename tvalue>
+template<
+        typename tkey,
+        typename tvalue>
 class red_black_tree final:
-
-    public binary_search_tree<tkey, tvalue>
+        public binary_search_tree<tkey, tvalue>
 {
 
 public:
@@ -20,65 +21,53 @@ public:
 private:
 
     struct node final:
-        binary_search_tree<tkey, tvalue>::node
+            binary_search_tree<tkey, tvalue>::node
     {
 
     public:
 
-        node_color _color;
+        node_color color;
 
     public:
 
         explicit node(
                 tkey const &key,
-                tvalue const &value) :
-                    binary_search_tree<tkey, tvalue>::node(key, value),
-                    _color(node_color::RED)
+                tvalue const &value):
+                binary_search_tree<tkey, tvalue>::node(key, value),
+                color(node_color::RED)
         {
 
         }
 
         explicit node(
                 tkey const &key,
-                tvalue const &&value) :
-                    binary_search_tree<tkey, tvalue>::node(key, std::move(value)),
-                    _color(node_color::RED)
+                tvalue &&value):
+                binary_search_tree<tkey, tvalue>::node(key, std::move(value)),
+                color(node_color::RED)
         {
 
         }
+
     };
 
 public:
 
     struct iterator_data final:
-        public binary_search_tree<tkey, tvalue>::iterator_data
+            public binary_search_tree<tkey, tvalue>::iterator_data
     {
-
-    private:
-
-        node_color _color;
 
     public:
 
-        node_color get_color() const
-        {
-            if (this->is_state_initialized())
-            {
-                return _color;
-            }
-            else
-            {
-                std::logic_error("uninitialized iterator data");
-            }
-        }
+        node_color color;
 
     public:
 
         explicit iterator_data(
-            unsigned int depth,
-            tkey const &key,
-            tvalue const &value,
-            node_color color);
+                unsigned int depth,
+                tkey const &key,
+                tvalue const &value,
+                node_color color);
+
     };
 
 private:
@@ -90,333 +79,491 @@ private:
 
     public:
 
-        void balance_after_insertion_method(
-                std::stack<typename binary_search_tree<tkey, tvalue>::node **> &path,
-                red_black_tree<tkey, tvalue> const *rb_tree)
+        void balance_method_after_insert(std::stack<typename binary_search_tree<tkey, tvalue>::node **> &path,
+                                  red_black_tree<tkey, tvalue> const *rb_tree)
         {
-            std::stack<typename binary_search_tree<tkey, tvalue>::node **> temp_path = path;
-
-            while (!temp_path.empty())
-            {
-                typename binary_search_tree<tkey, tvalue>::node *base_node = *(temp_path.top());
-                auto *node = static_cast<red_black_tree<tkey, tvalue>::node*>(base_node);
-
-                std::string color = node->_color == red_black_tree<tkey, tvalue>::node_color::RED ? "RED" : "BLACK";
-
-                std::cout << "Key: " << node->key << ", Value: " << node->value << " Color: " << color << std::endl;
-                temp_path.pop();
-            }
+            std::cout << "balance after insert method has started" << std::endl;
 
             if (path.empty())
             {
                 return;
             }
 
-            red_black_tree<tkey, tvalue>::node* son_node = reinterpret_cast<typename red_black_tree<tkey, tvalue>::node *>(*(path.top()));
+            red_black_tree<tkey, tvalue>::node *son_node = reinterpret_cast<typename red_black_tree<tkey, tvalue>::node *>(*(path.top()));
 
-            if (path.size() == 1)
+            if (son_node == rb_tree->_root)
             {
-                son_node->_color = node_color::BLACK;
+                std::cout << "disposed node is root" << std::endl;
+                son_node->color = node_color::BLACK;
                 return;
             }
 
             path.pop();
 
-            red_black_tree<tkey, tvalue>::node* parent_node = reinterpret_cast<typename red_black_tree<tkey, tvalue>::node *>(*(path.top()));
-            red_black_tree<tkey, tvalue>::node** parent_node_ptr = reinterpret_cast<typename red_black_tree<tkey, tvalue>::node **>(path.top());
+            red_black_tree<tkey, tvalue>::node *parent_node = reinterpret_cast<typename red_black_tree<tkey, tvalue>::node *>(*(path.top()));
+            red_black_tree<tkey, tvalue>::node **parent_node_ptr = reinterpret_cast<typename red_black_tree<tkey, tvalue>::node **>(path.top());
 
-            path.pop();
-
-            if (parent_node->_color == node_color::BLACK)
+            if (parent_node->color == node_color::BLACK)
             {
+                std::cout << "parent node has black color" << std::endl;
                 return;
             }
 
-            red_black_tree<tkey, tvalue>::node* grandparent_node = reinterpret_cast<typename red_black_tree<tkey, tvalue>::node *>(*(path.top()));
-            red_black_tree<tkey, tvalue>::node** grandparent_node_ptr = reinterpret_cast<typename red_black_tree<tkey, tvalue>::node **>(path.top());
-
             path.pop();
 
-            red_black_tree<tkey, tvalue>::node *uncle_node;
+            red_black_tree<tkey, tvalue>::node *grandparent_node = reinterpret_cast<typename red_black_tree<tkey, tvalue>::node *>(*(path.top()));
+            red_black_tree<tkey, tvalue>::node **grandparent_node_ptr = reinterpret_cast<typename red_black_tree<tkey, tvalue>::node **>(path.top());
 
-            if (grandparent_node->left_subtree == parent_node)
+            red_black_tree<tkey, tvalue>::node* uncle_node;
+
+            if (grandparent_node->right_subtree == parent_node)
             {
-                uncle_node = reinterpret_cast<typename red_black_tree<tkey, tvalue>::node*>(grandparent_node->right_subtree);
+                std::cout << "uncle is left subtree" << std::endl;
 
-                if ((uncle_node == nullptr) || (uncle_node->_color == node_color::BLACK))
+                uncle_node = reinterpret_cast<red_black_tree<tkey, tvalue>::node*>(grandparent_node->left_subtree);
+
+                if ((uncle_node != nullptr) && (uncle_node->color == node_color::RED))
                 {
-                    if (parent_node->left_subtree == son_node)
-                    {
-                        rb_tree->small_right_rotation(
-                                *reinterpret_cast<typename binary_search_tree<tkey, tvalue>::node **>(parent_node_ptr));
+                    std::cout << "uncle node is left subtree and red color" << std::endl;
 
-                        parent_node->_color = node_color::BLACK;
-                        grandparent_node->_color = node_color::RED;
-                    }
-                    else
-                    {
-                        if (parent_node == rb_tree->_root)
-                        {
-                            rb_tree->small_left_rotation(
-                                    *reinterpret_cast<typename binary_search_tree<tkey, tvalue>::node **>((rb_tree->_root)));
-                        }
-                        else
-                        {
-                            rb_tree->small_left_rotation(
-                                    *reinterpret_cast<typename binary_search_tree<tkey, tvalue>::node **>(parent_node_ptr));
-                        }
+                    uncle_node->color = node_color::BLACK;
+                    parent_node->color = node_color::BLACK;
+                    grandparent_node->color = node_color::RED;
 
-                        parent_node->_color = node_color::BLACK;
-                        grandparent_node->_color = node_color::RED;
-
-                        if (grandparent_node == rb_tree->_root)
-                        {
-                            rb_tree->small_right_rotation(
-                                    *reinterpret_cast<typename binary_search_tree<tkey, tvalue>::node **>((rb_tree->_root)));
-                        }
-                        else
-                        {
-                            rb_tree->small_right_rotation(
-                                    *reinterpret_cast<typename binary_search_tree<tkey, tvalue>::node **>(grandparent_node_ptr));
-                        }
-                    }
+                    balance_method_after_insert(path, rb_tree);
                 }
                 else
                 {
-                    grandparent_node->_color = node_color::RED;
-                    parent_node->_color = node_color::BLACK;
-                    uncle_node->_color = node_color::BLACK;
-                    balance_after_insertion_method(path, rb_tree);
+                    std::cout << "uncle node is left subtree and black color" << std::endl;
+
+                    if (parent_node->left_subtree == son_node)
+                    {
+                        std::cout << "son node is left subtree: small right rotate" << std::endl;
+                        rb_tree->small_right_rotation(*reinterpret_cast<typename binary_search_tree<tkey, tvalue>::node**>(parent_node_ptr));
+                    }
+                    else
+                    {
+                        std::cout << "son node is right rotate: small left rotate" << std::endl;
+                        rb_tree->small_left_rotation(*reinterpret_cast<typename binary_search_tree<tkey, tvalue>::node**>(grandparent_node_ptr));
+                    }
+
+                    balance_method_after_insert(path, rb_tree);
                 }
             }
             else
             {
-                uncle_node = reinterpret_cast<typename red_black_tree<tkey, tvalue>::node*>(grandparent_node->left_subtree);
+                std::cout << "uncle is right subtree" << std::endl;
 
-                if ((uncle_node == nullptr) || (uncle_node->_color == node_color::BLACK))
+                uncle_node = reinterpret_cast<red_black_tree<tkey, tvalue>::node*>(grandparent_node->right_subtree);
+
+                if ((uncle_node != nullptr) && (uncle_node->color == node_color::RED))
                 {
-                    if (parent_node->left_subtree == son_node)
-                    {
-                        rb_tree->small_left_rotation(
-                                *reinterpret_cast<typename binary_search_tree<tkey, tvalue>::node **>(parent_node_ptr));
+                    std::cout << "uncle node is right subtree and red color" << std::endl;
 
-                        parent_node->_color = node_color::BLACK;
-                        grandparent_node->_color = node_color::RED;
-                    }
-                    else
-                    {
-                        if (parent_node == rb_tree->_root)
-                        {
-                            rb_tree->small_right_rotation(
-                                    *reinterpret_cast<typename binary_search_tree<tkey, tvalue>::node **>((rb_tree->_root)));
-                        }
-                        else
-                        {
-                            rb_tree->small_right_rotation(
-                                    *reinterpret_cast<typename binary_search_tree<tkey, tvalue>::node **>(parent_node_ptr));
-                        }
+                    parent_node->color = node_color::BLACK;
+                    uncle_node->color = node_color::BLACK;
+                    grandparent_node->color = node_color::RED;
 
-                        parent_node->_color = node_color::BLACK;
-                        grandparent_node->_color = node_color::RED;
-
-                        if (grandparent_node == rb_tree->_root)
-                        {
-                            rb_tree->small_left_rotation(
-                                    *reinterpret_cast<typename binary_search_tree<tkey, tvalue>::node **>((rb_tree->_root)));
-                        }
-                        else
-                        {
-                            rb_tree->small_left_rotation(
-                                    *reinterpret_cast<typename binary_search_tree<tkey, tvalue>::node **>(grandparent_node_ptr));
-                        }
-                    }
-                    balance_after_insertion_method(path, rb_tree);
+                    balance_method_after_insert(path, rb_tree);
                 }
                 else
                 {
-                    grandparent_node->_color = node_color::RED;
-                    parent_node->_color = node_color::BLACK;
-                    uncle_node->_color = node_color::BLACK;
-                    balance_after_insertion_method(path, rb_tree);
+                    std::cout << "uncle node is right subtree and black color" << std::endl;
+
+                    if (parent_node->left_subtree == son_node)
+                    {
+                        std::cout << "son node is left subtree" << std::endl;
+
+                        rb_tree->small_right_rotation(*reinterpret_cast<typename binary_search_tree<tkey, tvalue>::node**>(grandparent_node_ptr));
+                    }
+                    else
+                    {
+                        std::cout << "son node is right subtree" << std::endl;
+
+                        rb_tree->small_left_rotation(*reinterpret_cast<typename binary_search_tree<tkey, tvalue>::node**>(parent_node_ptr));
+                    }
                 }
             }
         }
 
-//        void balance_after_disposal_method(
-//                std::stack<typename binary_search_tree<tkey, tvalue>::node **> &path,
-//                typename binary_search_tree<tkey, tvalue>::node* node_to_dispose)
-//        {
-//            if (path.empty())
+        void balance_method_after_dispose(std::stack<typename binary_search_tree<tkey, tvalue>::node **> &path, red_black_tree<tkey, tvalue> const *tree)
+        {
+            std::cout << "start balance method after dispose" << std::endl;
+
+            if (path.empty())
+            {
+                std::cout << "stack is empty" << std::endl;
+                return;
+            }
+
+            red_black_tree<tkey, tvalue>::node *parent_node = reinterpret_cast<typename red_black_tree<tkey, tvalue>::node *>(*(path.top()));
+            red_black_tree<tkey, tvalue>::node **parent_node_ptr = reinterpret_cast<typename red_black_tree<tkey, tvalue>::node **>(path.top());
+
+            bool left_subtree = false;
+
+//            if (parent_node == nullptr || parent_node->color == node_color::RED)
 //            {
+//                std::cout << "only one node or don't need a balance" << std::endl;
 //                return;
 //            }
-//
-//            if (node_to_dispose->left_subtree != nullptr && node_to_dispose->right_subtree != nullptr)
-//            {
-//                if (get_color(node_to_dispose) == node_color::RED)
-//                {
-//                    return;
-//                }
-//            }
-//            else if (node_to_dispose->left_subtree != nullptr || node_to_dispose->right_subtree != nullptr)
-//            {
-//
-//            }
-//            else
-//            {
-//
-//            }
-//        }
 
+            red_black_tree<tkey, tvalue>::node *brother_node;
+            red_black_tree<tkey, tvalue>::node **brother_node_ptr;
+
+            if (parent_node->left_subtree != nullptr)
+            {
+                brother_node = reinterpret_cast<typename red_black_tree<tkey, tvalue>::node *>(parent_node->left_subtree);
+                brother_node_ptr = reinterpret_cast<typename red_black_tree<tkey, tvalue>::node **>(&(parent_node->left_subtree));
+                left_subtree = false;
+            }
+            else
+            {
+                brother_node = reinterpret_cast<typename red_black_tree<tkey, tvalue>::node *>(parent_node->right_subtree);
+                brother_node_ptr = reinterpret_cast<typename red_black_tree<tkey, tvalue>::node **>(&(parent_node->right_subtree));
+                left_subtree = true;
+            }
+
+            if (brother_node->color == node_color::BLACK)
+            {
+                red_black_tree<tkey, tvalue>::node *left_child_to_brother = reinterpret_cast<typename red_black_tree<tkey, tvalue>::node *>(brother_node->left_subtree);
+                red_black_tree<tkey, tvalue>::node *right_child_to_brother = reinterpret_cast<typename red_black_tree<tkey, tvalue>::node *>(brother_node->right_subtree);
+
+                if (left_child_to_brother != nullptr && left_child_to_brother->color == node_color::RED ||
+                    right_child_to_brother != nullptr && right_child_to_brother->color == node_color::RED)
+                {
+                    if (left_subtree)
+                    {
+                        if (right_child_to_brother != nullptr && right_child_to_brother->color == node_color::RED)
+                        {
+                            brother_node->color = parent_node->color;
+                            parent_node->color = node_color::BLACK;
+                            right_child_to_brother->color = node_color::BLACK;
+
+                            tree->small_left_rotation(*reinterpret_cast<typename binary_search_tree<tkey, tvalue>::node**>(parent_node_ptr));
+                            return;
+                        }
+                        else if (left_child_to_brother != nullptr && left_child_to_brother->color == node_color::RED &&
+                                right_child_to_brother && right_child_to_brother->color == node_color::BLACK)
+                        {
+                            left_child_to_brother->color = node_color::BLACK;
+                            brother_node->color = node_color::RED;
+
+                            tree->small_right_rotation(*reinterpret_cast<typename binary_search_tree<tkey, tvalue>::node**>(brother_node_ptr));
+                            balance_method_after_dispose(path, tree);
+                        }
+                    }
+                    else
+                    {
+                        if (left_child_to_brother != nullptr && left_child_to_brother->color == node_color::RED)
+                        {
+                            brother_node->color = parent_node->color;
+                            parent_node->color = node_color::BLACK;
+                            left_child_to_brother->color = node_color::BLACK;
+                            tree->small_right_rotation(*reinterpret_cast<typename binary_search_tree<tkey, tvalue>::node**>(parent_node_ptr));
+                            return;
+                        }
+                        else if (right_child_to_brother != nullptr && right_child_to_brother->color == node_color::RED &&
+                                left_child_to_brother && left_child_to_brother->color == node_color::BLACK)
+                        {
+                            right_child_to_brother->color = node_color::BLACK;
+                            brother_node->color = node_color::RED;
+                            tree->small_left_rotation(*reinterpret_cast<typename binary_search_tree<tkey, tvalue>::node**>(brother_node_ptr));
+                            balance_method_after_dispose(path, tree);
+                        }
+                    }
+                }
+                else
+                {
+                    brother_node->color = node_color::RED;
+
+                    if (parent_node->color == node_color::RED)
+                    {
+                        parent_node->color = node_color::BLACK;
+                        return;
+                    }
+                    else
+                    {
+                        parent_node->color = node_color::BLACK;
+                        if (left_subtree)
+                        {
+                            path.pop();
+                            red_black_tree<tkey, tvalue>::node *grandparent_node = reinterpret_cast<typename red_black_tree<tkey, tvalue>::node *>(*(path.top()));
+                            if (grandparent_node && grandparent_node->left_subtree == parent_node)
+                            {
+                                balance_method_after_dispose(path, tree);
+                            }
+                            else if (grandparent_node)
+                            {
+                                balance_method_after_dispose(path, tree);
+                            }
+                        }
+                        else
+                        {
+                            path.pop();
+                            red_black_tree<tkey, tvalue>::node *grandpa = reinterpret_cast<typename red_black_tree<tkey, tvalue>::node *>(*(path.top()));
+                            if (grandpa && grandpa->right_subtree == parent_node)
+                            {
+                                balance_method_after_dispose(path, tree);
+                            }
+                            else if (grandpa)
+                            {
+                                balance_method_after_dispose(path, tree);
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                parent_node->color = node_color::RED;
+                brother_node->color = node_color::BLACK;
+
+                if (left_subtree)
+                {
+                    tree->small_left_rotation(*reinterpret_cast<typename binary_search_tree<tkey, tvalue>::node**>(parent_node_ptr));
+                    balance_method_after_dispose(path, tree);
+                }
+                else
+                {
+                    tree->small_right_rotation((*reinterpret_cast<typename binary_search_tree<tkey, tvalue>::node**>(parent_node_ptr)));
+                    balance_method_after_dispose(path, tree);
+                }
+            }
+        }
     };
 
+
+
+
+private:
+
     class insertion_template_method final:
-        public binary_search_tree<tkey, tvalue>::insertion_template_method,
-        public balancer
+            public binary_search_tree<tkey, tvalue>::insertion_template_method,
+            public balancer
     {
 
     public:
 
         explicit insertion_template_method(
-            red_black_tree<tkey, tvalue> *tree,
-            typename binary_search_tree<tkey, tvalue>::insertion_of_existent_key_attempt_strategy insertion_strategy);
-
+                red_black_tree<tkey, tvalue> *tree,
+                typename binary_search_tree<tkey, tvalue>::insertion_of_existent_key_attempt_strategy insertion_strategy);
 
     private:
 
         void balance(std::stack<typename binary_search_tree<tkey, tvalue>::node **> &path) override
         {
-            this->balance_after_insertion_method(path, dynamic_cast<red_black_tree<tkey, tvalue> const *>(this->_tree));
+            this->balance_method_after_insert(path, dynamic_cast<red_black_tree<tkey, tvalue> const *>(this->_tree));
         }
     };
 
     class disposal_template_method final:
-        public binary_search_tree<tkey, tvalue>::disposal_template_method
+            public binary_search_tree<tkey, tvalue>::disposal_template_method,
+            public balancer
     {
 
     public:
 
         explicit disposal_template_method(
-            red_black_tree<tkey, tvalue> *tree,
-            typename binary_search_tree<tkey, tvalue>::disposal_of_nonexistent_key_attempt_strategy disposal_strategy);
-
+                red_black_tree<tkey, tvalue> *tree,
+                typename binary_search_tree<tkey, tvalue>::disposal_of_nonexistent_key_attempt_strategy disposal_strategy);
     private:
 
-        void balance(
-                std::stack<typename binary_search_tree<tkey, tvalue>::node **> &path) override
+        void balance(std::stack<typename binary_search_tree<tkey, tvalue>::node **> &path) override
         {
+            path.pop();
 
+            this->balance_method_after_dispose(path, dynamic_cast<red_black_tree<tkey, tvalue> const *>(this->_tree));
         }
 
+        template<typename T>
+        inline void swap(T &&one, T &&another)
+        {
+            T temp = std::move(one);
+            one = std::move(another);
+            another = std::move(temp);
+        }
+
+    public:
+
+        tvalue dispose(tkey const &key) override
+        {
+            auto path = this->find_path(key);
+
+            if (*(path.top()) == nullptr)
+            {
+                std::cout << "case path is empty" << std::endl;
+                return tvalue();
+            }
+
+            tvalue value = (*(path.top()))->value;
+
+            if ((*(path.top()))->left_subtree != nullptr && (*(path.top()))->right_subtree != nullptr)
+            {
+                std::cout << "node has 2 subtrees" << std::endl;
+
+                auto *dispose_node = *(path.top());
+
+                auto **max_left_subtree = reinterpret_cast<typename binary_search_tree<tkey, tvalue>::node**>(&((*(path.top()))->left_subtree));
+
+                while (*max_left_subtree != nullptr)
+                {
+                    path.push(max_left_subtree);
+                    max_left_subtree = reinterpret_cast<typename binary_search_tree<tkey, tvalue>::node**>(&((*max_left_subtree)->right_subtree));
+                }
+
+                swap(std::move(dispose_node->key), std::move((*(path.top()))->key));
+                swap(std::move(dispose_node->value), std::move((*(path.top()))->value));
+
+//                path.push(max_left_subtree);
+            }
+
+            if ((*path.top())->left_subtree != nullptr || (*path.top())->right_subtree != nullptr)
+            {
+                std::cout << "node has 1 subtree" << std::endl;
+
+                typename binary_search_tree<tkey, tvalue>::node** subtree;
+
+                subtree = ((*path.top())->right_subtree == nullptr) ? &(*path.top())->left_subtree : &(*path.top())->right_subtree;
+
+                swap(std::move((*subtree)->key), std::move((*(path.top()))->key));
+                swap(std::move((*subtree)->value), std::move((*(path.top()))->value));
+
+                path.push(subtree);
+            }
+
+            if ((*path.top())->left_subtree == nullptr && (*path.top())->right_subtree == nullptr)
+            {
+                std::cout << "node is without subtrees" << std::endl;
+
+                red_black_tree<tkey, tvalue>::node* current_node = reinterpret_cast<typename red_black_tree<tkey, tvalue>::node *>(*(path.top()));
+
+                if (current_node->color == node_color::BLACK)
+                {
+                    std::cout << "dispose node is black" << std::endl;
+
+                    allocator::destruct(*(path.top()));
+                    this->deallocate_with_guard(*(path.top()));
+
+                    *(path.top()) = nullptr;
+
+                    this->balance(path);
+
+                    return value;
+                }
+                else
+                {
+                    std::cout << "dispose node is red" << std::endl;
+
+                    allocator::destruct(*(path.top()));
+                    this->deallocate_with_guard(*(path.top()));
+
+                    *(path.top()) = nullptr;
+
+                    return value;
+                }
+            }
+        }
     };
 
 public:
-
     explicit red_black_tree(
             std::function<int(tkey const &, tkey const &)> comparer,
-            allocator* allocator = nullptr,
+            allocator *allocator = nullptr,
             logger *logger = nullptr,
-            typename binary_search_tree<tkey, tvalue>::insertion_of_existent_key_attempt_strategy insertion_strategy =
-                binary_search_tree<tkey, tvalue>::insertion_of_existent_key_attempt_strategy::throw_an_exception,
-            typename binary_search_tree<tkey, tvalue>::disposal_of_nonexistent_key_attempt_strategy disposal_strategy =
-                binary_search_tree<tkey, tvalue>::disposal_of_nonexistent_key_attempt_strategy::throw_an_exception);
+            typename binary_search_tree<tkey, tvalue>::insertion_of_existent_key_attempt_strategy insertion_strategy = binary_search_tree<tkey, tvalue>::insertion_of_existent_key_attempt_strategy::throw_an_exception,
+            typename binary_search_tree<tkey, tvalue>::disposal_of_nonexistent_key_attempt_strategy disposal_strategy = binary_search_tree<tkey, tvalue>::disposal_of_nonexistent_key_attempt_strategy::throw_an_exception);
 
 public:
-
     ~red_black_tree() noexcept final;
 
-    red_black_tree(red_black_tree<tkey, tvalue> &other);
+    red_black_tree(
+            red_black_tree<tkey, tvalue> const &other);
 
-    red_black_tree<tkey, tvalue> &operator=(red_black_tree<tkey, tvalue> const &other);
+    red_black_tree<tkey, tvalue> &operator=(
+            red_black_tree<tkey, tvalue> const &other);
 
-    red_black_tree(red_black_tree<tkey, tvalue> &&other) noexcept;
+    red_black_tree(
+            red_black_tree<tkey, tvalue> &&other) noexcept;
 
-    red_black_tree<tkey, tvalue> &operator=(red_black_tree<tkey, tvalue> &&other) noexcept;
+    red_black_tree<tkey, tvalue> &operator=(
+            red_black_tree<tkey, tvalue> &&other) noexcept;
 
-
-private:
-
-    static void set_color(
-            typename binary_search_tree<tkey,tvalue>::node* node,
-            node_color color) noexcept
-    {
-        dynamic_cast<red_black_tree<tkey, tvalue>::node*>(node)->_color = color;
-    }
-
-    static typename red_black_tree<tkey, tvalue>::node_color get_color(
-            typename binary_search_tree<tkey,tvalue>::node* node) noexcept
-    {
-        auto* rb_tree_node = dynamic_cast<red_black_tree<tkey, tvalue>::node*>(node);
-
-        if (rb_tree_node != nullptr)
-        {
-            return rb_tree_node->_color;
-        }
-
-        return node_color::BLACK;
-    }
 };
 
-template<typename tkey, typename tvalue>
+template<
+        typename tkey,
+        typename tvalue>
 red_black_tree<tkey, tvalue>::iterator_data::iterator_data(
-    unsigned int depth,
-    tkey const &key,
-    tvalue const &value,
-    typename red_black_tree<tkey, tvalue>::node_color color):
+        unsigned int depth,
+        tkey const &key,
+        tvalue const &value,
+        typename red_black_tree<tkey, tvalue>::node_color color):
         binary_search_tree<tkey, tvalue>::iterator_data(depth, key, value)
 {
-    this->_color = color;
+    this->color = color;
 }
 
-template<typename tkey, typename tvalue>
+template<
+        typename tkey,
+        typename tvalue>
 red_black_tree<tkey, tvalue>::insertion_template_method::insertion_template_method(
-    red_black_tree<tkey, tvalue> *tree,
-    typename binary_search_tree<tkey, tvalue>::insertion_of_existent_key_attempt_strategy insertion_strategy):
+        red_black_tree<tkey, tvalue> *tree,
+        typename binary_search_tree<tkey, tvalue>::insertion_of_existent_key_attempt_strategy insertion_strategy):
         binary_search_tree<tkey, tvalue>::insertion_template_method(tree, insertion_strategy)
 {
 
 }
 
-template<typename tkey,typename tvalue>
+template<
+        typename tkey,
+        typename tvalue>
 red_black_tree<tkey, tvalue>::disposal_template_method::disposal_template_method(
-    red_black_tree<tkey, tvalue> *tree,
-    typename binary_search_tree<tkey, tvalue>::disposal_of_nonexistent_key_attempt_strategy disposal_strategy) :
+        red_black_tree<tkey, tvalue> *tree,
+        typename binary_search_tree<tkey, tvalue>::disposal_of_nonexistent_key_attempt_strategy disposal_strategy):
         binary_search_tree<tkey, tvalue>::disposal_template_method(tree, disposal_strategy)
 {
 
 }
 
-template<typename tkey,typename tvalue>
+template<
+        typename tkey,
+        typename tvalue>
 red_black_tree<tkey, tvalue>::red_black_tree(
         std::function<int(tkey const &, tkey const &)> comparer,
-        allocator* allocator,
+        allocator *allocator,
         logger *logger,
         typename binary_search_tree<tkey, tvalue>::insertion_of_existent_key_attempt_strategy insertion_strategy,
-        typename binary_search_tree<tkey, tvalue>::disposal_of_nonexistent_key_attempt_strategy disposal_strategy) :
+        typename binary_search_tree<tkey, tvalue>::disposal_of_nonexistent_key_attempt_strategy disposal_strategy):
+        binary_search_tree<tkey, tvalue>(new red_black_tree<tkey, tvalue>::insertion_template_method(this, insertion_strategy), new typename binary_search_tree<tkey, tvalue>::obtaining_template_method(dynamic_cast<binary_search_tree<tkey, tvalue> *>(this)), new red_black_tree<tkey, tvalue>::disposal_template_method(this, disposal_strategy), comparer, allocator, logger)
 
-        binary_search_tree<tkey, tvalue>(new red_black_tree<tkey, tvalue>::insertion_template_method(this, insertion_strategy),
-                                         new typename binary_search_tree<tkey, tvalue>::obtaining_template_method(dynamic_cast<binary_search_tree<tkey, tvalue> *>(this)),
-                                         new red_black_tree<tkey, tvalue>::disposal_template_method(this, disposal_strategy), comparer, allocator, logger)
 {
 
 }
 
-
-template<typename tkey,typename tvalue>
+template<
+        typename tkey,
+        typename tvalue>
 red_black_tree<tkey, tvalue>::~red_black_tree() noexcept
 {
 
 }
 
-template<typename tkey,typename tvalue>
-red_black_tree<tkey, tvalue>::red_black_tree(red_black_tree<tkey, tvalue> &other)
+template<
+        typename tkey,
+        typename tvalue>
+red_black_tree<tkey, tvalue>::red_black_tree(
+        red_black_tree<tkey, tvalue> const &other) : red_black_tree<tkey, tvalue>(other._keys_comparer, other.get_allocator(), other.get_logger(),
+                                                                                  binary_search_tree<tkey, tvalue>::insertion_of_existent_key_attempt_strategy::throw_an_exception,
+                                                                                  binary_search_tree<tkey, tvalue>::disposal_of_nonexistent_key_attempt_strategy::throw_an_exception)
 {
 
 }
 
-template<typename tkey,typename tvalue>
+template<
+        typename tkey,
+        typename tvalue>
 red_black_tree<tkey, tvalue> &red_black_tree<tkey, tvalue>::operator=(
-    red_black_tree<tkey, tvalue> const &other)
+        red_black_tree<tkey, tvalue> const &other)
 {
     if (this != &other)
     {
@@ -430,9 +577,11 @@ red_black_tree<tkey, tvalue> &red_black_tree<tkey, tvalue>::operator=(
     return *this;
 }
 
-template<typename tkey,typename tvalue>
-red_black_tree<tkey, tvalue>::red_black_tree(red_black_tree<tkey, tvalue> &&other) noexcept :
-        red_black_tree<tkey, tvalue>(other._keys_comparer, other.get_allocator(), other.get_logger())
+template<
+        typename tkey,
+        typename tvalue>
+red_black_tree<tkey, tvalue>::red_black_tree(
+        red_black_tree<tkey, tvalue> &&other) noexcept : red_black_tree<tkey, tvalue>(other._keys_comparer, other.get_allocator(), other.get_logger())
 {
     this->_insertion_template = other._insertion_template;
     other._insertion_template = nullptr;
@@ -445,26 +594,23 @@ red_black_tree<tkey, tvalue>::red_black_tree(red_black_tree<tkey, tvalue> &&othe
 
     this->_root = other._root;
     other._root = nullptr;
-
 }
 
-template<typename tkey,typename tvalue>
-red_black_tree<tkey, tvalue> &red_black_tree<tkey, tvalue>::operator=(red_black_tree<tkey, tvalue> &&other) noexcept
+template<
+        typename tkey,
+        typename tvalue>
+red_black_tree<tkey, tvalue> &red_black_tree<tkey, tvalue>::operator=(
+        red_black_tree<tkey, tvalue> &&other) noexcept
 {
     if (this != &other)
     {
         clear(this->_root);
-
         this->_allocator = other._allocator;
         other._allocator = nullptr;
-
         this->_logger = other._logger;
         other._logger = nullptr;
-
         this->_keys_comparer = other._keys_comparer;
-        other._keys_comparer = nullptr;
-
-        this->_root = other._root;
+        this->_root =other._root;
         other._root = nullptr;
     }
 

@@ -102,7 +102,8 @@ bool infix_iterator_test(
     for (auto const &item: expected_result)
     {
         std::cout << std::to_string((*it)->get_key()) << " " << std::to_string(item.get_key()) << std::endl;
-        std::cout << std::to_string((*it)->depth) << " " << std::to_string(item.depth) << std::endl;
+//        std::cout << std::to_string((*it)->depth) << " " << std::to_string(item.depth) << std::endl;
+
         if ((*it)->depth != item.depth || (*it)->get_key() != item.get_key() || (*it)->get_value() != item.get_value())
         {
             return false;
@@ -163,7 +164,7 @@ bool postfix_iterator_test(
 }
 
 TEST(redBlackTreePositiveTests, test1)
-{//todo depth
+{
     logger *logger = create_logger(std::vector<std::pair<std::string, logger::severity>>
                                            {
                                                    {
