@@ -88,14 +88,11 @@ bool compare_results(
     return true;
 }
 
-template<
-        typename tkey,
-        typename tvalue>
+template<typename tkey, typename tvalue>
 bool infix_iterator_test(
         red_black_tree<tkey, tvalue> const &tree,
         std::vector<typename red_black_tree<tkey, tvalue>::iterator_data> &expected_result)
 {
-
     std::string line;
     auto it = tree.cbegin_infix();
 
@@ -105,18 +102,17 @@ bool infix_iterator_test(
 //        std::cout << std::to_string((*it)->depth) << " " << std::to_string(item.depth) << std::endl;
 
         if ((*it)->depth != item.depth || (*it)->get_key() != item.get_key() || (*it)->get_value() != item.get_value())
+            // || reinterpret_cast<typename red_black_tree<tkey, tvalue>::iterator_data const *>(*it)->color != item.color)
         {
             return false;
         }
         ++it;
     }
-    // ||reinterpret_cast<typename red_black_tree<tkey, tvalue>::iterator_data const *>(*it)->color != item.color)
+
     return true;
 }
 
-template<
-        typename tkey,
-        typename tvalue>
+template<typename tkey, typename tvalue>
 bool prefix_iterator_test(
         red_black_tree<tkey, tvalue> const &tree,
         std::vector<typename red_black_tree<tkey, tvalue>::iterator_data> &expected_result)
@@ -129,7 +125,7 @@ bool prefix_iterator_test(
         std::cout << "1" << std::endl;
         std::cout << std::to_string((*it)->get_key()) << " " << std::to_string(item.get_key()) << std::endl;
         if ((*it)->depth != item.depth || (*it)->get_key() != item.get_key() || (*it)->get_value() != item.get_value())
-            // || reinterpret_cast<typename red_black_tree<tkey, tvalue>::iterator_data const *>(*it)->color != item.color)
+            //|| reinterpret_cast<typename red_black_tree<tkey, tvalue>::iterator_data const *>(*it)->_color != item._color)
         {
             return false;
         }
@@ -138,15 +134,11 @@ bool prefix_iterator_test(
     return true;
 }
 
-template<
-        typename tkey,
-        typename tvalue>
+template<typename tkey, typename tvalue>
 bool postfix_iterator_test(
         red_black_tree<tkey, tvalue> const &tree,
-        std::vector<typename red_black_tree<tkey, tvalue>::iterator_data> &expected_result
-)
+        std::vector<typename red_black_tree<tkey, tvalue>::iterator_data> &expected_result)
 {
-
     std::string line;
     auto it = tree.cbegin_postfix();
 
@@ -154,7 +146,7 @@ bool postfix_iterator_test(
         auto const &item: expected_result)
     {
         if ((*it)->depth != item.depth || (*it)->get_key() != item.get_key() || (*it)->get_value() != item.get_value())
-            //|| reinterpret_cast<typename red_black_tree<tkey, tvalue>::iterator_data const *>(*it)->color != item.color)
+            //|| reinterpret_cast<typename red_black_tree<tkey, tvalue>::iterator_data const *>(*it)->_color != item._color)
         {
             return false;
         }
@@ -620,9 +612,7 @@ TEST(redBlackTreePositiveTests, test11)
     delete logger;
 }
 
-int main(
-        int argc,
-        char **argv)
+int main(int argc, char **argv)
 {
     testing::InitGoogleTest(&argc, argv);
 
