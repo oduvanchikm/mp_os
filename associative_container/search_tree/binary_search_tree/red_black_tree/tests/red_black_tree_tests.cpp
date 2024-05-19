@@ -101,8 +101,12 @@ bool infix_iterator_test(
         std::cout << std::to_string((*it)->get_key()) << " " << std::to_string(item.get_key()) << std::endl;
 //        std::cout << std::to_string((*it)->depth) << " " << std::to_string(item.depth) << std::endl;
 
+        std::string gg = reinterpret_cast<typename red_black_tree<tkey, tvalue>::iterator_data const *>(*it)->_color == red_black_tree<tkey, tvalue>::node_color::RED ? "red" : "black";
+
+        std::cout << gg << std::endl;
+
         if ((*it)->depth != item.depth || (*it)->get_key() != item.get_key() || (*it)->get_value() != item.get_value())
-            // || reinterpret_cast<typename red_black_tree<tkey, tvalue>::iterator_data const *>(*it)->color != item.color)
+            // || reinterpret_cast<typename red_black_tree<tkey, tvalue>::iterator_data const *>(*it)->_color != item._color)
         {
             return false;
         }
@@ -123,6 +127,10 @@ bool prefix_iterator_test(
     for (auto const &item: expected_result)
     {
         std::cout << "1" << std::endl;
+
+
+
+
         std::cout << std::to_string((*it)->get_key()) << " " << std::to_string(item.get_key()) << std::endl;
         if ((*it)->depth != item.depth || (*it)->get_key() != item.get_key() || (*it)->get_value() != item.get_value())
             //|| reinterpret_cast<typename red_black_tree<tkey, tvalue>::iterator_data const *>(*it)->_color != item._color)
@@ -458,6 +466,9 @@ TEST(redBlackTreePositiveTests, test8)
     rb1->insert(18, "e");
 
     rb1->dispose(15);
+
+
+    int x = 6;
 
     std::vector<typename red_black_tree<int, std::string>::iterator_data> expected_result =
             {

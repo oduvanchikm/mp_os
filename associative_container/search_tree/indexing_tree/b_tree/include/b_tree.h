@@ -1,838 +1,886 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
-#include <ctype.h>
-#include <limits.h>
-#include <stdarg.h>
-#include <stdbool.h>
+#ifndef MATH_PRACTICE_AND_OPERATING_SYSTEMS_TEMPLATE_REPO_B_TREE_H
+#define MATH_PRACTICE_AND_OPERATING_SYSTEMS_TEMPLATE_REPO_B_TREE_H
+#include "search_tree.h"
+#include <allocator.h>
+#include <logger_builder.h>
 
-typedef enum
+template<typename tkey, typename tvalue>
+class b_tree final:
+        public search_tree<tkey, tvalue>
 {
-    OK,
-    ERROR,
-    INVALID_ARGUMENT,
-    NEGATIVE_NUMBER,
-    ERROR_WITH_MEMORY_ALLOCATION
 
-} status_code;
+private:
 
-void print_errors(int flag)
-{
-    switch(flag)
+    void insert_inner(
+            typename associative_container<tkey, tvalue>::key_value_pair &&kvp);
+
+public:
+
+    void insert(tkey const &key, tvalue const &value) override;
+
+    void insert(tkey const &key, tvalue &&value) override;
+
+    tvalue const &obtain(
+            tkey const &key) override;
+
+    tvalue dispose(
+            tkey const &key) override;
+
+    std::vector<typename associative_container<tkey, tvalue>::key_value_pair> obtain_between(
+            tkey const &lower_bound,
+            tkey const &upper_bound,
+            bool lower_bound_inclusive,
+            bool upper_bound_inclusive) override;
+
+//    void update(tkey const& key, tvalue const &value) override;
+//
+//    void update_inner(typename associative_container<tkey, tvalue>::key_value_pair &&kvp);
+
+    class infix_iterator final
     {
-        case ERROR_WITH_MEMORY_ALLOCATION:
-            printf("Error with memory allocation\n");
-            break;
+        friend class b_tree<tkey, tvalue>;
 
-        case INVALID_ARGUMENT:
-            printf("This is wrong\n");
-            break;
+    private:
 
-        default:
-            break;
+        std::stack<std::pair<typename search_tree<tkey, tvalue>::common_node *, int>> _path;
+
+    public:
+
+        explicit infix_iterator(
+                typename search_tree<tkey, tvalue>::common_node *subtree_root);
+
+        explicit infix_iterator(std::stack<std::pair<typename search_tree<tkey, tvalue>::common_node *, int>> &path);
+
+    public:
+
+        bool operator==(
+                infix_iterator const &other) const noexcept;
+
+        bool operator!=(
+                infix_iterator const &other) const noexcept;
+
+        infix_iterator &operator++();
+
+        infix_iterator operator++(
+                int not_used);
+
+        std::tuple<size_t, size_t, tkey const &, tvalue &> operator*() const;
+
+    };
+
+    class infix_const_iterator final
+    {
+
+    private:
+
+        typename b_tree<tkey, tvalue>::infix_iterator _iterator;
+
+    public:
+
+        explicit infix_const_iterator(
+                typename search_tree<tkey, tvalue>::common_node *subtree_root);
+
+    public:
+
+        bool operator==(
+                infix_const_iterator const &other) const noexcept;
+
+        bool operator!=(
+                infix_const_iterator const &other) const noexcept;
+
+        infix_const_iterator &operator++();
+
+        infix_const_iterator operator++(
+                int not_used);
+
+        std::tuple<size_t, size_t, tkey const &, tvalue const &> operator*() const;
+
+    };
+
+private:
+
+    size_t _t;
+
+public:
+
+    explicit b_tree(
+            size_t t,
+            std::function<int(tkey const &, tkey const &)> keys_comparer = std::less<tkey>(),
+            allocator *allocator = nullptr,
+            logger *logger = nullptr);
+
+public:
+
+    b_tree(
+            b_tree<tkey, tvalue> const &other);
+
+    b_tree<tkey, tvalue> &operator=(
+            b_tree<tkey, tvalue> const &other);
+
+    b_tree(
+            b_tree<tkey, tvalue> &&other) noexcept;
+
+    b_tree<tkey, tvalue> &operator=(
+            b_tree<tkey, tvalue> &&other) noexcept;
+
+    ~b_tree();
+
+private:
+
+    inline size_t get_min_keys_count() const noexcept;
+
+    inline size_t get_max_keys_count() const noexcept;
+
+public:
+
+    infix_iterator begin_infix() const noexcept;
+
+    infix_iterator end_infix() const noexcept;
+
+    infix_const_iterator cbegin_infix() const noexcept;
+
+    infix_const_iterator cend_infix() const noexcept;
+
+private:
+
+    typename search_tree<tkey, tvalue>::common_node *copy(
+            typename search_tree<tkey, tvalue>::common_node *node);
+
+    typename search_tree<tkey, tvalue>::common_node *copy();
+
+    void clear(
+            typename search_tree<tkey, tvalue>::common_node *node);
+
+    void clear();
+
+};
+
+template<
+        typename tkey,
+        typename tvalue>
+b_tree<tkey, tvalue>::infix_iterator::infix_iterator(
+        typename search_tree<tkey, tvalue>::common_node *subtree_root)
+{
+    while (subtree_root != nullptr)
+    {
+        _path.push(std::make_pair(subtree_root, 0));
+        subtree_root = subtree_root->subtrees[0];
     }
 }
 
-status_code roman_digits_flag(int num, char **result)
+template<typename tkey, typename tvalue>
+b_tree<tkey, tvalue>::infix_iterator::infix_iterator(std::stack<std::pair<typename search_tree<tkey, tvalue>::common_node *, int>> &path):
+        _path(path)
 {
-    int roman_value[] = {1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1};
-    char* roman_char[] = {"M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"};
 
-    int len = sizeof(roman_value) / sizeof(roman_value[0]);
-
-    *result = (char*)malloc(sizeof(char) * (len + 1));
-
-    if (!(*result))
-    {
-        return ERROR_WITH_MEMORY_ALLOCATION;
-    }
-
-    (*result)[0] = '\0';
-
-    for (int i = 0; i < len; i++)
-    {
-        if (num < 0)
-        {
-            (*result)[0] = '-';
-            i++;
-            num = abs(num);
-        }
-        else
-        {
-            while (num >= roman_value[i])
-            {
-                num -= roman_value[i];
-
-                strcat(*result, roman_char[i]);
-            }
-        }
-    }
-    return OK;
 }
 
-int find_max_fibonacci(int *fib_digit, int number)
+template<
+        typename tkey,
+        typename tvalue>
+bool b_tree<tkey, tvalue>::infix_iterator::operator!=(
+        b_tree::infix_iterator const &other) const noexcept
 {
-    int fib_cur = 1;
-    int fib_prev = 1;
-    int fib_next;
-    int count = 0;
-    while (number >= fib_cur)
-    {
-        fib_next = fib_prev + fib_cur;
-        fib_prev = fib_cur;
-        fib_cur = fib_next;
-        count++;
-    }
-    if (number == fib_cur)
-    {
-        *fib_digit = fib_cur;
-        return count;
-    }
-    count--;
-    *fib_digit = fib_prev;
-
-    return count;
+    return !(*this == other);
 }
 
-status_code zeckendorf(unsigned int n, char **result)
+template<
+        typename tkey,
+        typename tvalue>
+bool b_tree<tkey, tvalue>::infix_iterator::operator==(
+        b_tree::infix_iterator const &other) const noexcept
 {
-    if (n == 0)
-    {
-        return INVALID_ARGUMENT;
-    }
-    int fib = 0;
-    int length = find_max_fibonacci(&fib, n);
-
-    char *array = (char*) malloc(length * sizeof(char));
-
-    if (!array)
-    {
-        return ERROR_WITH_MEMORY_ALLOCATION;
-    }
-
-    for (int i = 0; i < length; ++i)
-    {
-        array[i] = '0';
-    }
-    // Выход за границу массива
-    // NEED FIX
-    array[length + 2] = '\0';
-    array[length + 1] = '1';
-    array[length] = '1';
-
-    n -= fib;
-
-    int index = find_max_fibonacci(&fib, n);
-    while (n > 0)
-    {
-        array[index] = '1';
-        n -= fib;
-        index = find_max_fibonacci(&fib, n);
-    }
-    *result = array;
-    return OK;
-}
-
-int my_strlen(int number, int base)
-{
-    int count = 0;
-    if (number < 0)
-    {
-        count++;
-        number *= -1;
-    }
-
-    while (number > 0)
-    {
-        number /= base;
-        count++;
-    }
-
-    return count;
-}
-
-status_code decemal_to_other_base_l(char **result, int number, int base)
-{
-    if (base < 2 || base > 36)
-    {
-        base = 10;
-    }
-    int len = my_strlen(number, base);
-    int sign = 1;
-    if (number < 0)
-    {
-        sign = -1;
-        number *= -1;
-    }
-    int r;
-    char *buffer = (char*)malloc(sizeof(char) * (len + 1));
-
-    if (!buffer)
-    {
-        return ERROR_WITH_MEMORY_ALLOCATION;
-    }
-
-    char* ptr = buffer + len;
-    *ptr = '\0';
-
-    while(number > 0)
-    {
-        r = number % base;
-        *--ptr = (r > 9)? r - 10 + 'a' : r + '0';
-        number /= base;
-    }
-
-    if (sign == -1)
-    {
-        *--ptr = '-';
-    }
-
-    *result = buffer;
-
-    return OK;
-}
-
-status_code decemal_to_other_base_h(char **result, int number, int base)
-{
-    if (base < 2 || base > 36)
-    {
-        base = 10;
-    }
-    int len = my_strlen(number, base);
-    int sign = 1;
-    if (number < 0)
-    {
-        sign = -1;
-        number *= -1;
-    }
-    int r;
-    char *buffer = (char*)malloc(sizeof(char) * (len + 1));
-
-    if (!buffer)
-    {
-        return ERROR_WITH_MEMORY_ALLOCATION;
-    }
-
-    char* ptr = buffer + len;
-    *ptr = '\0';
-
-    while(number > 0)
-    {
-        r = number % base;
-        *--ptr = (r > 9)? r - 10 + 'A' : r + '0';
-        number /= base;
-    }
-
-    if (sign == -1)
-    {
-        *--ptr = '-';
-    }
-
-    *result = buffer;
-
-    return OK;
-}
-
-bool is_low(char string)
-{
-    if (string >= 'a' && string <= 'z')
+    if (_path.empty() && other._path.empty())
     {
         return true;
     }
-    return false;
+
+    if (_path.empty() ^ other._path.empty())
+    {
+        return false;
+    }
+
+    return _path.top() == other._path.top();
 }
 
-bool is_high(char string)
+template<
+        typename tkey,
+        typename tvalue>
+typename b_tree<tkey, tvalue>::infix_iterator &b_tree<tkey, tvalue>::infix_iterator::operator++()
 {
-    if (string >= 'A' && string <= 'Z')
+    if (_path.empty())
     {
-        return true;
-    }
-    return false;
-}
+        // TODO: undefined behavior
 
-int other_base_to_ten_h(char* number, int base)
-{
-    if (!number)
-    {
-        return INVALID_ARGUMENT;
+        return *this;
     }
 
-    if (!is_high(*number))
+    auto *node = _path.top().first;
+    auto index = _path.top().second;
+
+    if (node->subtrees[0] != nullptr)
     {
-        return INVALID_ARGUMENT;
-    }
-
-    int symbol = 1;
-    char *ptr = NULL;
-    int result = 0;
-
-    if (*number == '-')
-    {
-        symbol = -1;
-        ptr = number + 1;
-    }
-    else
-    {
-        ptr = number;
-    }
-    while (*ptr)
-    {
-        result = result * base + (isdigit(*ptr) ? *ptr  - '0' : *ptr - 'A' + 10);
-        ptr++;
-    }
-
-    return result * symbol;
-}
-
-int other_base_to_ten_l(char* number, int base)
-{
-    if (!number)
-    {
-        return INVALID_ARGUMENT;
-    }
-
-    if (!is_low(*number))
-    {
-        return INVALID_ARGUMENT;
-    }
-
-    int symbol = 1;
-    char *ptr = NULL;
-    int result = 0;
-
-    if (*number == '-')
-    {
-        symbol = -1;
-        ptr = number + 1;
-    }
-    else
-    {
-        ptr = number;
-    }
-    while (*ptr)
-    {
-        result = result * base + (isdigit(*ptr) ? *ptr  - '0' : *ptr - 'a' + 10);
-        ptr++;
-    }
-
-    return result * symbol;
-}
-
-status_code print_damp_memory(char **result, void *num, size_t size)
-{
-    unsigned char *bytes = (unsigned char*)num;
-    unsigned char *buffer = (unsigned char*) malloc((size * 8 + 1) * sizeof(unsigned char));
-
-    if (!buffer)
-    {
-        return ERROR_WITH_MEMORY_ALLOCATION;
-    }
-
-    buffer[size * 8] = '\0';
-
-    int k = 0;
-
-    for (size_t i = 0; i < size; ++i)
-    {
-        for (int j = 7; j >= 0; --j)
+        index = ++_path.top().second;
+        while (node->subtrees[index] != nullptr)
         {
-            unsigned char bit = (bytes[i] >> j) & 1;
-            buffer[k++] = bit + '0';
+            node = node->subtrees[index];
+            index = 0;
+            _path.push(std::make_pair(node, 0));
+        }
+
+        return *this;
+    }
+
+    if (index != node->virtual_size - 1)
+    {
+        ++_path.top().second;
+
+        return *this;
+    }
+
+    do
+    {
+        _path.pop();
+
+        if (!_path.empty())
+        {
+            node = _path.top().first;
+            index = _path.top().second;
         }
     }
-    *result = buffer;
-    return OK;
+    while (!_path.empty() && index == node->virtual_size - (node->subtrees[0] == nullptr
+                                                            ? 1
+                                                            : 0));
+
+    return *this;
 }
 
-void overfprintf(FILE *file, const char *format, ...)
+template<
+        typename tkey,
+        typename tvalue>
+typename b_tree<tkey, tvalue>::infix_iterator b_tree<tkey, tvalue>::infix_iterator::operator++(
+        int not_used)
 {
-    va_list args;
-    va_start(args, format);
+    auto it = *this;
+    ++*this;
+    return it;
+}
 
-    int index = 0;
+template<
+        typename tkey,
+        typename tvalue>
+std::tuple<size_t, size_t, tkey const &, tvalue &> b_tree<tkey, tvalue>::infix_iterator::operator*() const
+{
+    auto &kvp = _path.top().first->keys_and_values[_path.top().second];
+    return std::tuple<size_t, size_t, tkey const &, tvalue &>(_path.size() - 1, _path.top().second, std::cref(kvp.key), std::ref(kvp.value));
+}
 
-    while (format[index] != '\0')
+template<
+        typename tkey,
+        typename tvalue>
+b_tree<tkey, tvalue>::infix_const_iterator::infix_const_iterator(
+        typename search_tree<tkey, tvalue>::common_node *subtree_root):
+        _iterator(subtree_root)
+{
+
+}
+
+template<
+        typename tkey,
+        typename tvalue>
+bool b_tree<tkey, tvalue>::infix_const_iterator::operator==(
+        b_tree::infix_const_iterator const &other) const noexcept
+{
+    return _iterator == other._iterator;
+}
+
+template<
+        typename tkey,
+        typename tvalue>
+bool b_tree<tkey, tvalue>::infix_const_iterator::operator!=(
+        b_tree::infix_const_iterator const &other) const noexcept
+{
+    return !(*this == other);
+}
+
+template<
+        typename tkey,
+        typename tvalue>
+typename b_tree<tkey, tvalue>::infix_const_iterator &b_tree<tkey, tvalue>::infix_const_iterator::operator++()
+{
+    ++_iterator;
+    return *this;
+}
+
+template<
+        typename tkey,
+        typename tvalue>
+typename b_tree<tkey, tvalue>::infix_const_iterator b_tree<tkey, tvalue>::infix_const_iterator::operator++(
+        int not_used)
+{
+    auto it = *this;
+    ++*this;
+    return it;
+}
+
+template<
+        typename tkey,
+        typename tvalue>
+std::tuple<size_t, size_t, tkey const &, tvalue const &> b_tree<tkey, tvalue>::infix_const_iterator::operator*() const
+{
+    auto data = *_iterator;
+    return std::tuple<size_t, size_t, tkey const &, tvalue const &>(std::get<0>(data), std::get<1>(data), std::cref(std::get<2>(data)), std::cref(std::get<3>(data)));
+}
+
+template<typename tkey, typename tvalue>
+void b_tree<tkey, tvalue>::insert_inner(
+        typename associative_container<tkey, tvalue>::key_value_pair &&kvp)
+{
+    auto path = this->find_path(kvp.key);
+    auto *node = *path.top().first;
+    if (node == nullptr && path.size() == 1)
     {
-        if (format[index] != '%')
+        typename search_tree<tkey ,tvalue>::common_node *new_node;
+        *path.top().first = new_node = this->create_node(_t);
+        allocator::construct(new_node->keys_and_values, std::move(kvp));
+        ++new_node->virtual_size;
+        return;
+    }
+    if (path.top().second >= 0)
+    {
+//        if (_insert_strategy == insertion_of_existent_key_attempt_strategy::throw_an_exception) throw std::logic_error("duplicate key");
+//        else
+//        {
+            int index = path.top().second;
+            node->keys_and_values[index].value = kvp.value;
+            return;
+//        }
+    }
+    size_t subtree_index = -path.top().second - 1;
+    typename search_tree<tkey, tvalue>::common_node *right_subtree = nullptr;
+    while (true)
+    {
+        if (node->virtual_size < get_max_keys_count())
         {
-            fprintf(file, "%c", format[index]);
-            index++;
+            this->node_insert(node, std::move(kvp), subtree_index, right_subtree);
+            return;
         }
-        else
-        {
-            int next_index = index + 1;
 
-            if (format[next_index] == '%')
+        auto res = this->node_split(node, std::move(kvp), subtree_index, right_subtree);
+        right_subtree = res.first;
+        kvp = std::move(res.second);
+
+        if (path.size() == 1)
+        {
+            typename search_tree<tkey, tvalue>::common_node *new_root = this->create_node(_t);
+            new_root->virtual_size = 1;
+            allocator::construct(new_root->keys_and_values, std::move(kvp));
+            new_root->subtrees[0] = node;
+            new_root->subtrees[1] = right_subtree;
+            *path.top().first = new_root;
+            return;
+        }
+
+        path.pop();
+        node = *path.top().first;
+        subtree_index = -path.top().second - 1;
+    }
+}
+
+
+//template<
+//        typename tkey,
+//        typename tvalue>
+//void b_tree<tkey, tvalue>::update_inner(
+//        typename associative_container<tkey, tvalue>::key_value_pair &&kvp)
+//{
+//    auto path = this->find_path(kvp.key);
+//    auto *node = *path.top().first;
+//    if (node == nullptr && path.size() == 1)
+//    {
+//        typename search_tree<tkey ,tvalue>::common_node *new_node;
+//        *path.top().first = new_node = this->create_node(_t);
+//        allocator::construct(new_node->keys_and_values, std::move(kvp));
+//        ++new_node->virtual_size;
+//        return;
+//    }
+//    if (path.top().second >= 0)
+//    {
+//        int index = path.top().second;
+//        node->keys_and_values[index].value = kvp.value;
+//    }
+//    else
+//    {
+//        throw std::logic_error("Value doesn't exist");
+//    }
+//}
+
+//template<
+//        typename tkey,
+//        typename tvalue>
+//void b_tree<tkey, tvalue>::update(tkey const& key, tvalue const &value)
+//{
+//    update_inner(std::move(typename associative_container<tkey, tvalue>::key_value_pair(key, value)));
+//}
+
+
+template<
+        typename tkey,
+        typename tvalue>
+void b_tree<tkey, tvalue>::insert(
+        const tkey &key,
+        const tvalue &value)
+{
+    insert_inner(typename associative_container<tkey, tvalue>::key_value_pair(key, value));
+}
+
+template<
+        typename tkey,
+        typename tvalue>
+void b_tree<tkey, tvalue>::insert(
+        const tkey &key,
+        tvalue &&value)
+{
+    insert_inner(std::move(typename associative_container<tkey, tvalue>::key_value_pair(key, value)));
+}
+
+template<
+        typename tkey,
+        typename tvalue>
+tvalue const &b_tree<tkey, tvalue>::obtain(
+        const tkey &key)
+{
+    auto path = this->find_path(key);
+    if (path.top().second < 0)
+    {
+        throw std::logic_error("Key not found");
+    }
+
+    return (*path.top().first)->keys_and_values[path.top().second].value;
+}
+
+template<
+        typename tkey,
+        typename tvalue>
+tvalue b_tree<tkey, tvalue>::dispose(
+        const tkey &key)
+{
+    auto path = this->find_path(key);
+    if (path.top().second < 0)
+    {
+        throw std::logic_error("key not found");
+    }
+
+    if ((*path.top().first)->subtrees[0] != nullptr)
+    {
+        auto non_terminal_node_with_key_found_info = path.top();
+        path.pop();
+        typename search_tree<tkey, tvalue>::common_node **iterator = non_terminal_node_with_key_found_info.first;
+
+        while (*iterator != nullptr)
+        {
+            auto index = *iterator == *non_terminal_node_with_key_found_info.first
+                         ? non_terminal_node_with_key_found_info.second
+                         : (*iterator)->virtual_size;
+
+            path.push(std::make_pair(iterator, -index - 1));
+
+            iterator = (*iterator)->subtrees + index;
+        }
+
+        search_tree<tkey, tvalue>::swap(std::move((*non_terminal_node_with_key_found_info.first)->keys_and_values[non_terminal_node_with_key_found_info.second]), std::move((*path.top().first)->keys_and_values[(*path.top().first)->virtual_size - 1]));
+        path.top().second = -path.top().second - 2;
+    }
+
+    auto target_node = *path.top().first;
+    auto kvp_to_dispose_index = path.top().second;
+    path.pop();
+
+    for (size_t i = kvp_to_dispose_index + 1; i < target_node->virtual_size; i++)
+    {
+        search_tree<tkey, tvalue>::swap(std::move(target_node->keys_and_values[i - 1]), std::move(target_node->keys_and_values[i]));
+    }
+
+    tvalue value = std::move(target_node->keys_and_values[--target_node->virtual_size].value);
+
+    allocator::destruct(target_node->keys_and_values + target_node->virtual_size);
+
+    while (true)
+    {
+        if (target_node->virtual_size >= get_min_keys_count())
+        {
+            return value;
+        }
+
+        if (path.size() == 0)
+        {
+            if (target_node->virtual_size == 0)
             {
-                fprintf(file, "%c", '%');
-                index = next_index + 1;
+                this->_root = target_node->subtrees[0];
+                this->destroy_node(target_node);
+            }
+
+            return value;
+        }
+
+        typename search_tree<tkey, tvalue>::common_node *parent = *path.top().first;
+        size_t position = -path.top().second - 1;
+        path.pop();
+
+        bool const left_brother_exists = position != 0;
+        bool const can_take_from_left_brother =
+                left_brother_exists &&
+                parent->subtrees[position - 1]->virtual_size > get_min_keys_count();
+
+        bool const right_brother_exists = position != parent->virtual_size;
+        bool const can_take_from_right_brother =
+                right_brother_exists &&
+                parent->subtrees[position + 1]->virtual_size > get_min_keys_count();
+
+        if (can_take_from_left_brother)
+        {
+            auto *left_brother = parent->subtrees[position - 1];
+            search_tree<tkey, tvalue>::swap(std::move(parent->keys_and_values[position - 1]), std::move(left_brother->keys_and_values[left_brother->virtual_size - 1]));
+
+            allocator::construct(target_node->keys_and_values + target_node->virtual_size, std::move(left_brother->keys_and_values[left_brother->virtual_size - 1]));
+            search_tree<tkey, tvalue>::swap(std::move(left_brother->subtrees[left_brother->virtual_size]), std::move(target_node->subtrees[target_node->virtual_size]));
+            target_node->subtrees[++target_node->virtual_size] = left_brother->subtrees[left_brother->virtual_size];
+
+            for (auto i = target_node->virtual_size - 1; i > 0; --i)
+            {
+                search_tree<tkey, tvalue>::swap(std::move(target_node->keys_and_values[i]),
+                                                std::move(target_node->keys_and_values[i - 1]));
+
+                search_tree<tkey, tvalue>::swap(std::move(target_node->subtrees[i + 1]), std::move(target_node->subtrees[i]));
+            }
+
+            allocator::destruct(left_brother->keys_and_values + --left_brother->virtual_size);
+
+            return value;
+        }
+
+        if (can_take_from_right_brother)
+        {
+            auto *right_brother = parent->subtrees[position + 1];
+            search_tree<tkey, tvalue>::swap(std::move(parent->keys_and_values[position]), std::move(right_brother->keys_and_values[0]));
+
+            allocator::construct(target_node->keys_and_values + target_node->virtual_size, std::move(right_brother->keys_and_values[0]));
+            target_node->subtrees[++target_node->virtual_size] = right_brother->subtrees[0];
+
+            for (size_t i = 0; i < right_brother->virtual_size - 1; ++i)
+            {
+                search_tree<tkey, tvalue>::swap(std::move(right_brother->keys_and_values[i]), std::move(right_brother->keys_and_values[i + 1]));
+
+                search_tree<tkey, tvalue>::swap(std::move(right_brother->subtrees[i]), std::move(right_brother->subtrees[i + 1]));
+            }
+
+            right_brother->subtrees[right_brother->virtual_size - 1] = right_brother->subtrees[right_brother->virtual_size];
+
+            allocator::destruct(right_brother->keys_and_values + --right_brother->virtual_size);
+
+            return value;
+        }
+
+        this->merge_nodes(parent, position - (left_brother_exists
+                                              ? 1
+                                              : 0));
+
+        target_node = parent;
+    }
+}
+
+template<
+        typename tkey,
+        typename tvalue>
+std::vector<typename associative_container<tkey, tvalue>::key_value_pair> b_tree<tkey, tvalue>::obtain_between(
+        tkey const &lower_bound,
+        tkey const &upper_bound,
+        bool lower_bound_inclusive,
+        bool upper_bound_inclusive)
+{
+    std::vector<typename associative_container<tkey, tvalue>::key_value_pair> range;
+
+    std::stack<std::pair<typename search_tree<tkey, tvalue>::common_node *, int>> path;
+
+    int index = -1;
+    if (this->_root == nullptr)
+    {
+        path.push(std::make_pair(this->_root, index));
+    }
+
+    typename search_tree<tkey, tvalue>::common_node **iterator = &(this->_root);
+    while (*iterator != nullptr && index < 0)
+    {
+        size_t left_bound_inclusive = 0;
+        size_t right_bound_inclusive = (*iterator)->virtual_size - 1;
+
+        bool found = true;
+        while (true)
+        {
+            index = (left_bound_inclusive + right_bound_inclusive) / 2;
+            auto comparison_result = this->_keys_comparer(lower_bound, (*iterator)->keys_and_values[index].key);
+            if (comparison_result == 0)
+            {
+                if (!lower_bound_inclusive)
+                {
+                    index = index + 1 == (*iterator)->virtual_size
+                            ? -(index + (comparison_result < 0 ? 0 : 1) + 1)
+                            : index + 1;
+                }
+                break;
+            }
+
+            if (left_bound_inclusive == right_bound_inclusive)
+            {
+                found = false;
+                index = -(index + (comparison_result < 0 ? 0 : 1) + 1);
+                break;
+            }
+
+            if (comparison_result < 0)
+            {
+                right_bound_inclusive = index;
             }
             else
             {
-                char flag[25];
-                int flag_index = 0;
-
-                while (format[next_index] != '\0' && (isalnum(format[next_index])))
-                {
-                    flag[flag_index++] = format[next_index++];
-                }
-
-                flag[flag_index] = '\0';
-
-                if (strcmp(flag, "Ro") == 0)
-                {
-                    char* roman_result = NULL;
-                    int arg = va_arg(args, int);
-                    status_code st_roman = roman_digits_flag(arg, &roman_result);
-                    if (st_roman == OK)
-                    {
-                        fprintf(file, "%s", roman_result);
-                    }
-                    else
-                    {
-                        print_errors(st_roman);
-                    }
-                    free(roman_result);
-                }
-
-                if (strcmp(flag, "Zr") == 0)
-                {
-                    char* zeck_result = NULL;
-                    unsigned int arg = va_arg(args, unsigned int);
-                    status_code st_zc = zeckendorf(arg, &zeck_result);
-                    if (st_zc == OK)
-                    {
-                        fprintf(file, "%s", zeck_result);
-                    }
-                    else
-                    {
-                        print_errors(st_zc);
-                    }
-                    free(zeck_result);
-                }
-
-                if (strcmp(flag, "Cv") == 0)
-                {
-                    char* Cv_result = NULL;
-                    int arg = va_arg(args, int);
-                    int system = va_arg(args, int);
-                    status_code Cv_st = decemal_to_other_base_l(&Cv_result, arg, system);
-
-                    if (Cv_st == OK)
-                    {
-                        fprintf(file, "%s", Cv_result);
-                    }
-
-                    else
-                    {
-                        print_errors(Cv_st);
-                    }
-                    free(Cv_result);
-                }
-
-                if (strcmp(flag, "CV") == 0)
-                {
-                    char* CV_result = NULL;
-                    int arg = va_arg(args, int);
-                    int system = va_arg(args, int);
-                    status_code CV_st = decemal_to_other_base_l(&CV_result, arg, system);
-
-                    if (CV_st == OK)
-                    {
-                        fprintf(file, "%s", CV_result);
-                    }
-                    else
-                    {
-                        print_errors(CV_st);
-                    }
-                    free(CV_result);
-                }
-
-                if (strcmp(flag, "to") == 0)
-                {
-                    char* arg = va_arg(args, char*);
-                    int system = va_arg(args, int);
-                    int to_st = other_base_to_ten_l(arg, system);
-                    fprintf(file, "%d", to_st);
-                }
-
-                if (strcmp(flag, "TO") == 0)
-                {
-                    char* arg = va_arg(args, char*);
-                    int system = va_arg(args, int);
-                    int TO_st = other_base_to_ten_h(arg, system);
-                    fprintf(file, "%d", TO_st);
-                }
-
-                if (strcmp(flag, "mi") == 0)
-                {
-                    char *mi_result = NULL;
-                    int arg = va_arg(args, int);
-                    status_code mi_st = print_damp_memory(&mi_result, &arg, sizeof(arg));
-
-                    if (mi_st == OK)
-                    {
-                        fprintf(file, "%s", mi_result);
-                    }
-                    else
-                    {
-                        print_errors(mi_st);
-                    }
-                    free(mi_result);
-                }
-
-                if (strcmp(flag, "mu") == 0)
-                {
-                    char *mu_result = NULL;
-                    unsigned int arg = va_arg(args, unsigned int);
-                    status_code mu_st = print_damp_memory(&mu_result, &arg, sizeof(arg));
-
-                    if (mu_st == OK)
-                    {
-                        fprintf(file, "%s", mu_result);
-                    }
-                    else
-                    {
-                        print_errors(mu_st);
-                    }
-                    free(mu_result);
-                }
-
-                if (strcmp(flag, "md") == 0)
-                {
-                    char *md_result = NULL;
-                    double arg = va_arg(args, double);
-                    status_code md_st = print_damp_memory(&md_result, &arg, sizeof(arg));
-
-                    if (md_st == OK)
-                    {
-                        fprintf(file, "%s", md_result);
-                    }
-                    else
-                    {
-                        print_errors(md_st);
-                    }
-                    free(md_result);
-                }
-
-                if (strcmp(flag, "mf") == 0)
-                {
-                    char *mf_result = NULL;
-                    float arg = va_arg(args, double);
-                    status_code mf_st = print_damp_memory(&mf_result, &arg, sizeof(arg));
-
-                    if (mf_st == OK)
-                    {
-                        fprintf(file, "%s", mf_result);
-                    }
-                    else
-                    {
-                        print_errors(mf_st);
-                    }
-                    free(mf_result);
-                }
-
-                else
-                {
-                    if (strcmp(flag, "n") == 0)
-                    {
-                        int *n_ptr = va_arg(args, int*);
-
-                        *n_ptr = ftell(file);
-                    }
-                    else
-                    {
-                        vfprintf(file, flag, args);
-                    }
-                }
-
-                index = next_index;
+                left_bound_inclusive = index + 1;
             }
         }
 
-    }
-    index++;
-    va_end(args);
-}
+        path.push(std::make_pair(*iterator, index < 0 ? -index - 1 : index));
 
-void oversprintf(char *buffer, const char *format, ...)
-{
-    va_list args;
-    va_start(args, format);
-
-    int index = 0;
-    int buffer_index = 0;
-
-    char* roman_result = NULL;
-    char* zeck_result = NULL;
-    char* Cv_result = NULL;
-    char* CV_result = NULL;
-    char* mi_result = NULL;
-    char* mu_result = NULL;
-    char* md_result = NULL;
-    char* mf_result = NULL;
-
-    while (format[index] != '\0')
-    {
-        if (format[index] != '%')
+        if (!found)
         {
-            buffer[buffer_index] = format[index];
-            buffer_index++;
-            index++;
+            break;
         }
-        else
+
+        if (index < 0)
         {
-            int next_index = index + 1;
-
-            if (format[next_index] == '%')
-            {
-                sprintf((buffer + buffer_index), "%c", '%');
-                index = next_index + 1;
-                buffer_index++;
-            }
-            else
-            {
-                char flag[25];
-                int flag_index = 0;
-//                flag[flag_index++] = '%';
-
-
-                while (format[next_index] != '\0' && (isalnum(format[next_index])))
-                {
-                    flag[flag_index++] = format[next_index++];
-                }
-
-                flag[flag_index] = '\0';
-
-                if (strcmp(flag, "%Ro") == 0)
-                {
-                    int arg = va_arg(args, int);
-                    status_code st_roman = roman_digits_flag(arg, &roman_result);
-                    if (st_roman == OK)
-                    {
-                        sprintf((buffer + buffer_index), "%s\n", roman_result);
-                        buffer_index += strlen(roman_result) + 1;
-                    }
-                    else
-                    {
-                        print_errors(st_roman);
-                    }
-                    free(roman_result);
-                }
-
-                if (strcmp(flag, "%Zr") == 0)
-                {
-                    unsigned int arg = va_arg(args, unsigned int);
-                    status_code st_zc = zeckendorf(arg, &zeck_result);
-                    if (st_zc == OK)
-                    {
-                        sprintf(&(buffer[buffer_index]), "%s\n", zeck_result);
-                        buffer_index += strlen(zeck_result) + 1;
-                    }
-                    else
-                    {
-                        print_errors(st_zc);
-                    }
-                    free(zeck_result);
-                }
-
-                    // if (strcmp(flag, "%Cv") == 0)
-                    // {
-                    //     int arg = va_arg(args, int);
-                    //     int system = va_arg(args, int);
-                    //     status_code Cv_st = decemal_to_other_base_l(&Cv_result, arg, system);
-
-                    //     if (Cv_st == OK)
-                    //     {
-                    //         sprintf(&(buffer[buffer_index]), "%s\n", Cv_result);
-                    //         buffer_index += strlen(Cv_result) + 1;
-                    //     }
-
-                    //     else
-                    //     {
-                    //         print_errors(Cv_st);
-                    //     }
-                    //     free(Cv_result);
-                    // }
-
-                    // if (strcmp(flag, "%CV") == 0)
-                    // {
-                    //     int arg = va_arg(args, int);
-                    //     int system = va_arg(args, int);
-                    //     status_code CV_st = decemal_to_other_base_l(&CV_result, arg, system);
-
-                    //     if (CV_st == OK)
-                    //     {
-                    //         sprintf(&(buffer[buffer_index]), "%s\n", CV_result);
-                    //         buffer_index += strlen(CV_result) + 1;
-                    //     }
-                    //     else
-                    //     {
-                    //         print_errors(CV_st);
-                    //     }
-                    //     free(CV_result);
-                    // }
-
-                    // if (strcmp(flag, "%to") == 0)
-                    // {
-                    //     char* arg = va_arg(args, char*);
-                    //     int system = va_arg(args, int);
-                    //     int to_st = other_base_to_ten_l(arg, system);
-                    //     sprintf(&(buffer[buffer_index]), "%d\n", system);
-                    //     buffer_index += 1;
-                    // }
-
-                    // if (strcmp(flag, "%TO") == 0)
-                    // {
-                    //     char* arg = va_arg(args, char*);
-                    //     int system = va_arg(args, int);
-                    //     int TO_st = other_base_to_ten_h(arg, system);
-                    //     sprintf(&(buffer[buffer_index]), "%d\n", system);
-                    //     buffer_index += 1;
-                    // }
-
-                    // if (strcmp(flag, "%mi") == 0)
-                    // {
-                    //     int arg = va_arg(args, int);
-                    //     status_code mi_st = print_damp_memory(&mi_result, &arg, sizeof(arg));
-
-                    //     if (mi_st == OK)
-                    //     {
-                    //         sprintf(&(buffer[buffer_index]), "%s\n", mi_result);
-                    //         buffer_index += strlen(mi_result) + 1;
-                    //     }
-                    //     else
-                    //     {
-                    //         print_errors(mi_st);
-                    //     }
-                    //     free(mi_result);
-                    // }
-
-                    // if (strcmp(flag, "%mu") == 0)
-                    // {
-                    //     unsigned int arg = va_arg(args, unsigned int);
-                    //     status_code mu_st = print_damp_memory(&mu_result, &arg, sizeof(arg));
-
-                    //     if (mu_st == OK)
-                    //     {
-                    //         sprintf(&(buffer[buffer_index]), "%s\n", mu_result);
-                    //         buffer_index += strlen(mu_result) + 1;
-                    //     }
-                    //     else
-                    //     {
-                    //         print_errors(mu_st);
-                    //     }
-                    //     free(mu_result);
-                    // }
-
-                    // if (strcmp(flag, "%md") == 0)
-                    // {
-                    //     double arg = va_arg(args, double);
-                    //     status_code md_st = print_damp_memory(&md_result, &arg, sizeof(arg));
-
-                    //     if (md_st == OK)
-                    //     {
-                    //         sprintf(&(buffer[buffer_index]), "%s\n", md_result);
-                    //         buffer_index += strlen(md_result) + 1;
-                    //     }
-                    //     else
-                    //     {
-                    //         print_errors(md_st);
-                    //     }
-                    //     free(md_result);
-                    // }
-
-                    // if (strcmp(flag, "%mf") == 0)
-                    // {
-                    //     float arg = va_arg(args, double);
-                    //     status_code mf_st = print_damp_memory(&mf_result, &arg, sizeof(arg));
-
-                    //     if (mf_st == OK)
-                    //     {
-                    //         sprintf(&(buffer[buffer_index]), "%s\n", mf_result);
-                    //         buffer_index += strlen(mf_result) + 1;
-                    //     }
-                    //     else
-                    //     {
-                    //         print_errors(mf_st);
-                    //     }
-                    //     free(mf_result);
-                    // }
-
-                else
-                {
-                    if (strcmp(flag, "%n") == 0)
-                    {
-                        int *n_ptr = va_arg(args, int*);
-                        *n_ptr = index;
-                    }
-                    else
-                    {
-                        vsprintf(buffer + buffer_index, flag, args);
-                    }
-                }
-                index = next_index;
-            }
+            iterator = (*iterator)->subtrees - index - 1;
         }
 
+        if (*iterator == nullptr && this->_keys_comparer((path.top().first)->keys_and_values[index].key, upper_bound) < (lower_bound_inclusive ? 0 : 1))
+        {
+            path = std::move(std::stack<std::pair<typename search_tree<tkey, tvalue>::common_node *, int>>());
+        }
     }
-    buffer[index] = '\0';
-    va_end(args);
-}
 
-int main()
-{
-    FILE* file = fopen("t1.txt", "w");
-    if (!file)
+    auto it = infix_iterator(path);
+    while (it != this->end_infix() && this->_keys_comparer(upper_bound, std::get<2>(*it)) > (upper_bound_inclusive ? -1 : 0))
     {
-        printf("Error with opening file\n");
-        return 0;
+        range.push_back(std::move(typename associative_container<tkey, tvalue>::key_value_pair(std::get<2>(*it), std::get<3>(*it))));
+        ++it;
     }
-    //int x;
 
-    //overfprintf(file, "Roman: %Ro\n", 56);
-    // overfprintf(file, "Zeckendorf: %Zr\n", 56);
-    // overfprintf(file, "System low: %Cv\n", 4375687, 16);
-    // overfprintf(file, "System high: %CV\n", 455439, 7);
-    // overfprintf(file, "System 10 low: %to\n", "agfyee", 32);
-    // overfprintf(file, "System 10 high: %TO\n", "123A", 16);
-    // overfprintf(file, "Bytes signed int: %mi\n", 45);
-    // overfprintf(file, "Bytes signed unsighted int: %mu\n", 485);
-    // overfprintf(file, "Bytes signed double: %md\n", 45.546);
-    // overfprintf(file, "Bytes signed float: %mf\n", 45.3463);
-    // overfprintf(file, "%n\n", &x);
-
-    //int size = 256;
-    //char buffer[size];
-
-    // oversprintf(buffer, "Roman: %Ro\n", 56);
-    // oversprintf(buffer, "Zeckendorf: %Zr\n", 56);
-    // oversprintf(buffer, "System low: %Cv\n", 4375687, 16);
-    // oversprintf(buffer, "System high: %CV\n", 455439, 7);
-    // oversprintf(buffer, "System 10 low: %to\n", "agfyee", 32);
-    // oversprintf(buffer, "System 10 high: %TO\n", "123A", 16);
-    // oversprintf(buffer, "Bytes signed int: %mi\n", 45);
-    // oversprintf(buffer, "Bytes signed unsighted int: %mu\n", 485);
-    // oversprintf(buffer, "Bytes signed double: %md\n", 45.546);
-    // oversprintf(buffer, "Bytes signed float: %mf\n", 45.3463);
-    // oversprintf(buffer, "%n\n", &x);
-
-    char mas[150];
-    oversprintf(mas, "%Zr", 100);
-    printf("%s\n", mas);
-
-    //100 = 3 + 8 + 89
-
-    //1 2 3 5 8 13 21 34 55 89
-
-    //0 0 1 0 1 0 0 0 0 1
-
-
-
-    // printf("%s\n", buffer);
-
-    fclose(file);
-    return 0;
+    return range;
 }
+
+template<
+        typename tkey,
+        typename tvalue>
+typename b_tree<tkey, tvalue>::infix_iterator b_tree<tkey, tvalue>::begin_infix() const noexcept
+{
+    return b_tree<tkey, tvalue>::infix_iterator(this->_root);
+}
+
+template<
+        typename tkey,
+        typename tvalue>
+typename b_tree<tkey, tvalue>::infix_iterator b_tree<tkey, tvalue>::end_infix() const noexcept
+{
+    return b_tree<tkey, tvalue>::infix_iterator(nullptr);
+}
+
+template<
+        typename tkey,
+        typename tvalue>
+typename b_tree<tkey, tvalue>::infix_const_iterator b_tree<tkey, tvalue>::cbegin_infix() const noexcept
+{
+    return b_tree<tkey, tvalue>::infix_const_iterator(this->_root);
+}
+
+template<
+        typename tkey,
+        typename tvalue>
+typename b_tree<tkey, tvalue>::infix_const_iterator b_tree<tkey, tvalue>::cend_infix() const noexcept
+{
+    return b_tree<tkey, tvalue>::infix_const_iterator(nullptr);
+}
+
+template<
+        typename tkey,
+        typename tvalue>
+b_tree<tkey, tvalue>::b_tree(
+        size_t t,
+        std::function<int(tkey const &, tkey const &)> keys_comparer,
+        allocator *allocator,
+        logger *logger):
+        search_tree<tkey, tvalue>(keys_comparer, logger, allocator)
+{
+
+    if ((_t = t) < 2)
+    {
+        throw std::logic_error("Invalid value of t parameter");
+    }
+}
+
+template<
+        typename tkey,
+        typename tvalue>
+b_tree<tkey, tvalue>::b_tree(
+        b_tree<tkey, tvalue> const &other):
+        search_tree<tkey, tvalue>(other._keys_comparer, other.get_logger(), other.get_allocator()),
+        _t(other._t)
+{
+    this->_root = copy(other._root);
+    this->_insert_strategy = other._insert_strategy;
+}
+
+template<
+        typename tkey,
+        typename tvalue>
+b_tree<tkey, tvalue> &b_tree<tkey, tvalue>::operator=(
+        b_tree<tkey, tvalue> const &other)
+{
+    if (this != &other)
+    {
+        clear();
+        this->_logger = other.get_logger();
+        this->_allocator = other.get_allocator();
+        this->_root = copy(other._root);
+        this->_insert_strategy = other._insert_strategy;
+    }
+
+    return *this;
+}
+
+template<
+        typename tkey,
+        typename tvalue>
+b_tree<tkey, tvalue>::b_tree(
+        b_tree<tkey, tvalue> &&other) noexcept:
+        search_tree<tkey, tvalue>(other._keys_comparer, other.get_logger(), other.get_allocator()),
+        _t(other._t)
+{
+    other._logger = nullptr;
+
+    other._allocator = nullptr;
+
+    this->_root = other._root;
+    this->_insert_strategy = other._insert_strategy;
+    other._root = nullptr;
+}
+
+template<
+        typename tkey,
+        typename tvalue>
+b_tree<tkey, tvalue> &b_tree<tkey, tvalue>::operator=(
+        b_tree<tkey, tvalue> &&other) noexcept
+{
+    if (this != &other)
+    {
+        clear();
+
+        this->_keys_comparer = other._keys_comparer;
+
+        this->_logger = other._logger;
+        other._logger = nullptr;
+
+        this->_allocator = other._allocator;
+        this->_insert_strategy = other._insert_strategy;
+        other._allocator = nullptr;
+
+        this->_root = other._root;
+        other._root = nullptr;
+    }
+
+    return *this;
+}
+
+template<
+        typename tkey,
+        typename tvalue>
+b_tree<tkey, tvalue>::~b_tree()
+{
+    clear();
+}
+
+template<
+        typename tkey,
+        typename tvalue>
+inline size_t b_tree<tkey, tvalue>::get_min_keys_count() const noexcept
+{
+    return _t - 1;
+}
+
+template<
+        typename tkey,
+        typename tvalue>
+inline size_t b_tree<tkey, tvalue>::get_max_keys_count() const noexcept
+{
+    return 2 * _t - 1;
+}
+
+template<
+        typename tkey,
+        typename tvalue>
+typename search_tree<tkey, tvalue>::common_node *b_tree<tkey, tvalue>::copy(
+        typename search_tree<tkey, tvalue>::common_node *node)
+{
+    if (node == nullptr)
+    {
+        return nullptr;
+    }
+
+    typename search_tree<tkey, tvalue>::common_node *copied = this->create_node(_t);
+    copied->virtual_size = node->virtual_size;
+
+    for (size_t i = 0; i < node->virtual_size; ++i)
+    {
+        allocator::construct(copied->keys_and_values + i, node->keys_and_values[i]);
+    }
+
+    for (size_t i = 0; i <= node->virtual_size; ++i)
+    {
+        copied->subtrees[i] = copy(node->subtrees[i]);
+    }
+
+    return copied;
+}
+
+template<
+        typename tkey,
+        typename tvalue>
+typename search_tree<tkey, tvalue>::common_node *b_tree<tkey, tvalue>::copy()
+{
+    return copy(this->_root);
+}
+
+template<
+        typename tkey,
+        typename tvalue>
+void b_tree<tkey, tvalue>::clear(
+        typename search_tree<tkey, tvalue>::common_node *node)
+{
+    if (node == nullptr)
+    {
+        return;
+    }
+
+    for (size_t i = 0; i <= node->virtual_size; ++i)
+    {
+        clear(node->subtrees[i]);
+    }
+
+    search_tree<tkey, tvalue>::destroy_node(node);
+}
+
+template<
+        typename tkey,
+        typename tvalue>
+void b_tree<tkey, tvalue>::clear()
+{
+    clear(this->_root);
+}
+
+#endif //MATH_PRACTICE_AND_OPERATING_SYSTEMS_TEMPLATE_REPO_B_TREE_H

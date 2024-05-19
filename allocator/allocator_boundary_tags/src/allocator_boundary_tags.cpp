@@ -337,7 +337,7 @@ unsigned char* allocator_boundary_tags::get_start_of_block(void* block_address) 
     std::string string_with_info;
     std::vector<allocator_test_utils::block_info> blocks_information = get_blocks_info();
 
-    for (block_info information : blocks_information)
+    for (const block_info& information : blocks_information)
     {
         std::string free_or_occupied = information.is_block_occupied ? "occupied" : "free";
         string_with_info += (free_or_occupied + "  " + std::to_string(information.block_size) + " | ");
@@ -402,7 +402,7 @@ void allocator_boundary_tags::deallocate(void *at)
     std::string string_with_info;
     std::vector<allocator_test_utils::block_info> blocks_information = get_blocks_info();
 
-    for (block_info information : blocks_information)
+    for (const block_info& information : blocks_information)
     {
         std::string free_or_occupied = information.is_block_occupied ? "occupied" : "free";
         string_with_info += (free_or_occupied + "  " + std::to_string(information.block_size) + " | ");

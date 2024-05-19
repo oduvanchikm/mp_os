@@ -17,7 +17,7 @@ class binary_search_tree:
 {
     friend class template_method_basics;
 
-protected:
+public:
 
     struct node
     {
@@ -2855,10 +2855,9 @@ public:
 
     ~binary_search_tree() override;
 
-private:
+protected:
 
-    void clear(
-            node *&subtree_root)
+    void clear(node *&subtree_root)
     {
         if (subtree_root == nullptr)
         {
@@ -2873,8 +2872,7 @@ private:
         subtree_root = nullptr;
     }
 
-    node *copy(
-            node const *subtree_root)
+    node *copy(node const *subtree_root)
     {
         if (subtree_root == nullptr)
         {
@@ -2888,6 +2886,7 @@ private:
 
         return subtree_root_copied;
     }
+
     void *allocate_with_guard_my(
             size_t value_size,
             size_t values_count) const
@@ -2911,7 +2910,6 @@ private:
         allocator::construct(raw_space, key, value);
     }
 
-    // TODO: should it be here or inside insertion template method?!
     virtual void call_node_constructor(
             node *raw_space,
             tkey const &key,
@@ -2924,13 +2922,14 @@ private:
             iterator_data *destination,
             node *source)
     {
-        //это зачем
+
     }
 
     virtual iterator_data *create_iterator_data() const
     {
         return new iterator_data();
     }
+
 
 public:
 
@@ -3052,30 +3051,26 @@ protected:
 
 // region binary_search_tree<tkey, tvalue>::node methods implementation
 
-template<
-        typename tkey,
-        typename tvalue>
+template<typename tkey, typename tvalue>
 binary_search_tree<tkey, tvalue>::node::node(
         tkey const &key,
         tvalue const &value):
-        key(key),
-        value(value),
-        left_subtree(nullptr),
-        right_subtree(nullptr)
+            key(key),
+            value(value),
+            left_subtree(nullptr),
+            right_subtree(nullptr)
 {
 
 }
 
-template<
-        typename tkey,
-        typename tvalue>
+template<typename tkey, typename tvalue>
 binary_search_tree<tkey, tvalue>::node::node(
         tkey const &key,
         tvalue &&value):
-        key(key),
-        value(std::move(value)),
-        left_subtree(nullptr),
-        right_subtree(nullptr)
+            key(key),
+            value(std::move(value)),
+            left_subtree(nullptr),
+            right_subtree(nullptr)
 {
 
 }
@@ -5009,9 +5004,7 @@ void binary_search_tree<tkey, tvalue>::small_left_rotation(
 
 }
 
-template<
-        typename tkey,
-        typename tvalue>
+template<typename tkey, typename tvalue>
 void binary_search_tree<tkey, tvalue>::small_right_rotation(
         binary_search_tree<tkey, tvalue>::node *&subtree_root,
         bool validate) const
@@ -5039,14 +5032,8 @@ void binary_search_tree<tkey, tvalue>::big_left_rotation(
         throw std::logic_error("can't rotate");
     }
 
-    node *right_child = subtree_root->right_subtree;
-    node *right_left_child = right_child->left_subtree;
-
-    right_child->left_subtree = right_left_child->right_subtree;
-    right_left_child->right = right_child;
-    subtree_root->right = right_left_child;
-
-    small_left_rotation(subtree_root, validate);
+    small_right_rotation(subtree_root->right_subtree, false);
+    small_left_rotation(subtree_root, false);
 }
 
 template<
@@ -5056,18 +5043,13 @@ void binary_search_tree<tkey, tvalue>::big_right_rotation(
         binary_search_tree<tkey, tvalue>::node *&subtree_root,
         bool validate) const
 {
-    if (validate && (subtree_root == nullptr || subtree_root->left_subtree == nullptr || subtree_root->left_subtree->right_subtree == nullptr)) {
+    if (validate && (subtree_root == nullptr || subtree_root->left_subtree == nullptr || subtree_root->left_subtree->right_subtree == nullptr))
+    {
         throw std::logic_error("can't rotate");
     }
-    node* left_child = subtree_root->left_subtree;
-    node* left_right_child = left_child->right_subtree;
 
-    subtree_root->left_subtree->right_subtree = left_right_child->left_subtree;
-    left_right_child->left_subtree = left_child;
-    subtree_root->left_subtree = left_right_child;
-
-    small_right_rotation(subtree_root, validate);
-
+    small_left_rotation(subtree_root->left_subtree, false);
+    small_right_rotation(subtree_root, false);
 }
 
 template<
@@ -5078,39 +5060,24 @@ void binary_search_tree<tkey, tvalue>::double_left_rotation(
         bool at_grandparent_first,
         bool validate) const
 {
-
-    if (at_grandparent_first)
+    if(validate && (subtree_root == nullptr || subtree_root->right_subtree == nullptr || subtree_root->right_subtree->right_subtree ==
+                                                                                         nullptr))
     {
-        if (validate && (subtree_root == nullptr || subtree_root->left_subtree == nullptr || subtree_root->left_subtree->right_subtree == nullptr))
-        {
-            throw std::logic_error("can't rotate");
-        }
+        throw std::logic_error("can't rotate");
+    }
 
-        node *left_child = subtree_root->left_subtree;
-        node *left_right_child = left_child->right_subtree;
-
-        left_child->right_subtree = left_right_child->left_subtree;
-        left_right_child->left_subtree = left_child;
-        subtree_root->left_subtree = left_right_child;
-
-        small_left_rotation(subtree_root, validate);
+    if(at_grandparent_first)
+    {
+        small_left_rotation(subtree_root, false);
+        small_left_rotation(subtree_root, false);
     }
     else
     {
-        small_left_rotation(subtree_root, validate);
-        if (validate && (subtree_root == nullptr || subtree_root->left_subtree == nullptr || subtree_root->left_subtree->right_subtree == nullptr))
-        {
-            throw std::logic_error("can't rotate");
-        }
-
-        node *left_child = subtree_root->left_subtree;
-        node *left_right_child = left_child->right_subtree;
-
-        left_child->right_subtree = left_right_child->left_subtree;
-        left_right_child->left_subtree = left_child;
-        subtree_root->left_subtree = left_right_child;
+        small_left_rotation(subtree_root->right->subtree, false);
+        small_left_rotation(subtree_root, false);
     }
 }
+
 template<
         typename tkey,
         typename tvalue>
@@ -5119,20 +5086,24 @@ void binary_search_tree<tkey, tvalue>::double_right_rotation(
         bool at_grandparent_first,
         bool validate) const
 {
-    if (subtree_root == nullptr || subtree_root->right_subtree == nullptr || subtree_root->right_subtree->left_subtree == nullptr)
+    if(validate && (subtree_root == nullptr || subtree_root->left_subtree == nullptr || subtree_root->left_subtree->left_subtree ==
+                                                                                        nullptr))
     {
         throw std::logic_error("can't rotate");
     }
 
-    node *right_child = subtree_root->right_subtree;
-    node *right_left_child = right_child->left_subtree;
-
-    right_child->left_subtree = right_left_child->right_subtree;
-    right_left_child->right = right_child;
-    subtree_root->right = right_left_child;
-
-    small_right_rotation(subtree_root, validate);
+    if(at_grandparent_first)
+    {
+        small_right_rotation(subtree_root, false);
+        small_right_rotation(subtree_root, false);
+    }
+    else
+    {
+        small_right_rotation(subtree_root->left_subtree, false);
+        small_right_rotation(subtree_root, false);
+    }
 }
+
 // endregion subtree rotations implementation
 
 #endif //MATH_PRACTICE_AND_OPERATING_SYSTEMS_BINARY_SEARCH_TREE_H

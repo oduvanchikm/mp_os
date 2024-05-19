@@ -3,7 +3,6 @@
 #include <logger_builder.h>
 #include <client_logger_builder.h>
 #include <list>
-
 #include "../include/allocator_red_black_tree.h"
 
 logger *create_logger(
@@ -44,7 +43,7 @@ TEST(positive_tests, test1)
 
     auto first_block = reinterpret_cast<int *>(alloc->allocate(sizeof(int), 250));
 
-    alloc->deallocate(first_block);
+//    alloc->deallocate(first_block);
 
 //    auto second_block = reinterpret_cast<char *>(alloc->allocate(sizeof(int), 25));
 

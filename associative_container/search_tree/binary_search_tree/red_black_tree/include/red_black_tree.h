@@ -17,7 +17,7 @@ public:
         BLACK
     };
 
-private:
+public:
 
     struct node final:
             binary_search_tree<tkey, tvalue>::node
@@ -32,8 +32,8 @@ private:
         explicit node(
                 tkey const &key,
                 tvalue const &value):
-                    binary_search_tree<tkey, tvalue>::node(key, value),
-                    color(node_color::RED)
+                binary_search_tree<tkey, tvalue>::node(key, value),
+                color(node_color::RED)
         {
 
         }
@@ -41,11 +41,12 @@ private:
         explicit node(
                 tkey const &key,
                 tvalue &&value):
-                    binary_search_tree<tkey, tvalue>::node(key, std::move(value)),
-                    color(node_color::RED)
+                binary_search_tree<tkey, tvalue>::node(key, std::move(value)),
+                color(node_color::RED)
         {
 
         }
+
 
     };
 
@@ -73,85 +74,16 @@ public:
 
     public:
 
-//        iterator_data() :
-//                binary_search_tree<tkey, tvalue>::iterator_data(),
-//                _color(node_color::RED)
-//        {
-//
-//        }
-
         explicit iterator_data(
                 unsigned int depth,
                 tkey const &key,
                 tvalue const &value,
-                node_color color);
+                node_color color) :
+                binary_search_tree<tkey, tvalue>::iterator_data(depth, key, value),
+                _color(color)
+        {
 
-//        iterator_data(iterator_data const &other) :
-//                    binary_search_tree<tkey, tvalue>::iterator_data(other),
-//                    _color(other._color)
-//        {
-//
-//        }
-//
-//        iterator_data(iterator_data &&other) noexcept :
-//                binary_search_tree<tkey, tvalue>::iterator_data(std::move(other)),
-//                _color(std::move(other._color))
-//        {
-//
-//        }
-//
-//        iterator_data &operator=(
-//                iterator_data const &other)
-//        {
-//            if (this != &other)
-//            {
-//                if (this->is_state_initialized())
-//                {
-//                    this->_key = other.key;
-//                    this->_value = other.value;
-//                }
-//                else
-//                {
-//                    allocator::construct(this->_key, other._key);
-//                    allocator::construct(this->_value, other._value);
-//                    this->_is_state_initialized = true;
-//                }
-//                this->depth = other.depth;
-//                _color = other._color;
-//            }
-//
-//            return *this;
-//        }
-//
-//        iterator_data &operator=(
-//                iterator_data &&other) noexcept
-//        {
-//            if (this != &other)
-//            {
-//                if (this->_is_state_initialized)
-//                {
-//                    _key(std::move(other.key));
-//                    _value(std::move(other.value));
-//                }
-//                else
-//                {
-//                    allocator::construct(this->_key, std::move(other._key));
-//                    allocator::construct(this->_value, std::move(other._value));
-//                    this->_is_state_initialized = true;
-//                }
-//                this->depth = other.depth;
-//                other.is_state_initialized = false;
-//                _color = std::move(_color);
-//            }
-//
-//            return *this;
-//        }
-//
-//        ~iterator_data() noexcept final
-//        {
-//
-//        }
-
+        }
     };
 
 private:
@@ -163,7 +95,8 @@ private:
 
     public:
 
-        void balance_method_after_insert(std::stack<typename binary_search_tree<tkey, tvalue>::node**> &path,red_black_tree<tkey, tvalue> const *rb_tree)
+        void balance_method_after_insert(std::stack<typename binary_search_tree<tkey, tvalue>::node**> &path,
+                                         red_black_tree<tkey, tvalue> const *rb_tree)
         {
             std::cout << "balance after insert method has started" << std::endl;
 
@@ -608,13 +541,13 @@ public:
         return node_color::RED;
     }
 
-//private:
+protected:
 
-//    size_t get_node_size() const noexcept
-//    {
-//        return sizeof(typename red_black_tree<tkey, tvalue>::node);
-//    }
-//
+    size_t get_node_size() const noexcept
+    {
+        return sizeof(typename red_black_tree<tkey, tvalue>::node);
+    }
+
 //    void call_node_constructor(
 //            node *raw_space,
 //            tkey const &key,
@@ -641,24 +574,25 @@ public:
 //        rbt_destination->color = rbt_source->color;
 //    }
 
+
 };
 
-template<typename tkey, typename tvalue>
-red_black_tree<tkey, tvalue>::iterator_data::iterator_data(
-        unsigned int depth,
-        tkey const &key,
-        tvalue const &value,
-        typename red_black_tree<tkey, tvalue>::node_color color):
-            binary_search_tree<tkey, tvalue>::iterator_data(depth, key, value)
-{
-    this->_color = color;
-}
+//template<typename tkey, typename tvalue>
+//red_black_tree<tkey, tvalue>::iterator_data::iterator_data(
+//        unsigned int depth,
+//        tkey const &key,
+//        tvalue const &value,
+//        typename red_black_tree<tkey, tvalue>::node_color color):
+//            binary_search_tree<tkey, tvalue>::iterator_data(depth, key, value)
+//{
+//    this->_color = color;
+//}
 
 template<typename tkey, typename tvalue>
 red_black_tree<tkey, tvalue>::insertion_template_method::insertion_template_method(
         red_black_tree<tkey, tvalue> *tree,
         typename binary_search_tree<tkey, tvalue>::insertion_of_existent_key_attempt_strategy insertion_strategy):
-            binary_search_tree<tkey, tvalue>::insertion_template_method(tree, insertion_strategy)
+        binary_search_tree<tkey, tvalue>::insertion_template_method(tree, insertion_strategy)
 {
 
 }
@@ -667,7 +601,7 @@ template<typename tkey, typename tvalue>
 red_black_tree<tkey, tvalue>::disposal_template_method::disposal_template_method(
         red_black_tree<tkey, tvalue> *tree,
         typename binary_search_tree<tkey, tvalue>::disposal_of_nonexistent_key_attempt_strategy disposal_strategy):
-            binary_search_tree<tkey, tvalue>::disposal_template_method(tree, disposal_strategy)
+        binary_search_tree<tkey, tvalue>::disposal_template_method(tree, disposal_strategy)
 {
 
 }
@@ -679,9 +613,9 @@ red_black_tree<tkey, tvalue>::red_black_tree(
         logger *logger,
         typename binary_search_tree<tkey, tvalue>::insertion_of_existent_key_attempt_strategy insertion_strategy,
         typename binary_search_tree<tkey, tvalue>::disposal_of_nonexistent_key_attempt_strategy disposal_strategy):
-            binary_search_tree<tkey, tvalue>(new red_black_tree<tkey, tvalue>::insertion_template_method(this, insertion_strategy),
-                                             new typename binary_search_tree<tkey, tvalue>::obtaining_template_method(dynamic_cast<binary_search_tree<tkey, tvalue> *>(this)),
-                                             new red_black_tree<tkey, tvalue>::disposal_template_method(this, disposal_strategy), comparer, allocator, logger)
+        binary_search_tree<tkey, tvalue>(new red_black_tree<tkey, tvalue>::insertion_template_method(this, insertion_strategy),
+                                         new typename binary_search_tree<tkey, tvalue>::obtaining_template_method(dynamic_cast<binary_search_tree<tkey, tvalue> *>(this)),
+                                         new red_black_tree<tkey, tvalue>::disposal_template_method(this, disposal_strategy), comparer, allocator, logger)
 
 {
     if (this->_insertion_template == nullptr || this->_obtaining_template == nullptr || this->_disposal_template == nullptr)
@@ -703,9 +637,9 @@ red_black_tree<tkey, tvalue>::~red_black_tree() noexcept
 
 template<typename tkey, typename tvalue>
 red_black_tree<tkey, tvalue>::red_black_tree(red_black_tree<tkey, tvalue> const &other) :
-            red_black_tree<tkey, tvalue>(other._keys_comparer, other.get_allocator(), other.get_logger(),
-                                         binary_search_tree<tkey, tvalue>::insertion_of_existent_key_attempt_strategy::throw_an_exception,
-                                         binary_search_tree<tkey, tvalue>::disposal_of_nonexistent_key_attempt_strategy::throw_an_exception)
+        red_black_tree<tkey, tvalue>(other._keys_comparer, other.get_allocator(), other.get_logger(),
+                                     binary_search_tree<tkey, tvalue>::insertion_of_existent_key_attempt_strategy::throw_an_exception,
+                                     binary_search_tree<tkey, tvalue>::disposal_of_nonexistent_key_attempt_strategy::throw_an_exception)
 {
 
 }
@@ -731,7 +665,7 @@ red_black_tree<tkey, tvalue> &red_black_tree<tkey, tvalue>::operator=(red_black_
 
 template<typename tkey, typename tvalue>
 red_black_tree<tkey, tvalue>::red_black_tree(red_black_tree<tkey, tvalue> &&other) noexcept :
-            red_black_tree<tkey, tvalue>(other._keys_comparer, other.get_allocator(), other.get_logger())
+        red_black_tree<tkey, tvalue>(other._keys_comparer, other.get_allocator(), other.get_logger())
 {
     this->_insertion_template = other._insertion_template;
     other._insertion_template = nullptr;

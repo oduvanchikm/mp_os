@@ -122,6 +122,7 @@ allocator_red_black_tree::allocator_red_black_tree(
 [[nodiscard]] void *allocator_red_black_tree::allocate(size_t value_size, size_t values_count)
 {
     trace_with_guard(get_typename() + "allocate method has started");
+
     std::cout << get_typename() + "allocate method has started" << std::endl;
 
     std::mutex* mutex_boundary_tags = get_mutex();
@@ -129,7 +130,7 @@ allocator_red_black_tree::allocator_red_black_tree(
 
     size_t requested_size = value_size * values_count;
 
-    std::cout << requested_size << std::endl;
+    information_with_guard("requested size: " + requested_size);
 
     if (requested_size < get_meta_size_occupied_block())
     {
@@ -137,11 +138,9 @@ allocator_red_black_tree::allocator_red_black_tree(
         requested_size = get_meta_size_occupied_block();
     }
 
-    std::cout << get_meta_size_occupied_block() << std::endl;
+    information_with_guard("meta size occupied block: " + get_meta_size_occupied_block());
 
     allocator_with_fit_mode::fit_mode fit_mode = get_fit_mode();
-
-    std::cout << "hi" << std::endl;
 
     void* target_block = nullptr;
 
@@ -152,17 +151,13 @@ allocator_red_black_tree::allocator_red_black_tree(
             break;
 
         case allocator_with_fit_mode::fit_mode::the_best_fit:
-            std::cout << "hi" << std::endl;
             target_block = get_best_fit(requested_size);
-            std::cout << "hi" << std::endl;
             break;
 
         case allocator_with_fit_mode::fit_mode::first_fit:
             target_block = get_first_fit(requested_size);
             break;
     }
-
-//    std::cout << "hi" << std::endl;
 
     if (target_block == nullptr)
     {
@@ -174,10 +169,9 @@ allocator_red_black_tree::allocator_red_black_tree(
     void* next_to_target_block = get_next_block(target_block);
     void* prev_to_target_block = get_previous_block(target_block);
 
-    std::cout << "bobobobo " << get_size_aviable_block(target_block) << std::endl;
+    information_with_guard("size target block: " + get_size_aviable_block(target_block));
 
     auto size_target_block = get_size_aviable_block(target_block) + get_meta_size_aviable_block() - sizeof(void*) * 3 - sizeof(bool);
-
     auto blocks_sizes_difference = size_target_block - requested_size;
 
     if (blocks_sizes_difference < get_meta_size_aviable_block())
@@ -392,7 +386,7 @@ inline std::string allocator_red_black_tree::get_typename() const noexcept
 
 size_t allocator_red_black_tree::get_ancillary_space_size() const noexcept
 {
-    return sizeof(logger *) + sizeof(allocator *) + sizeof(size_t) +  sizeof(size_t) + sizeof(allocator_with_fit_mode::fit_mode) + sizeof(std::mutex*) + sizeof(void *); //sizeof(sem_t*)
+    return sizeof(logger *) + sizeof(allocator *) + sizeof(size_t) +  sizeof(size_t) + sizeof(allocator_with_fit_mode::fit_mode) + sizeof(std::mutex*) + sizeof(void *);
 }
 
 allocator_with_fit_mode::fit_mode allocator_red_black_tree::get_fit_mode() const noexcept
@@ -615,8 +609,6 @@ void allocator_red_black_tree::fix_red_black_tree_after_insert(void* target_bloc
 
     void* parent_to_target_block = get_parent(target_block);
 
-    std::cout << "hohohohhohohohohoh" << std::endl;
-
     if (parent_to_target_block == nullptr)
     {
         if (is_color_red(target_block))
@@ -642,8 +634,7 @@ void allocator_red_black_tree::fix_red_black_tree_after_insert(void* target_bloc
 
     std::cout << "tell me why it sooo difficult difficult" << std::endl;
 
-    void* grandparent_to_target_block = get_parent(parent_to_target_block);
-//    void* grandparent_to_target_block = *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(parent_to_target_block) + sizeof(void*) + sizeof(void*) + sizeof(bool) + sizeof(size_t) + sizeof(bool));
+    void* grandparent_to_target_block = *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(parent_to_target_block) + sizeof(void*) + sizeof(void*) + sizeof(bool) + sizeof(size_t) + sizeof(bool));
 
     std::cout << "difficult" << std::endl;
 
@@ -766,9 +757,6 @@ void allocator_red_black_tree::dispose_block_from_red_black_tree(void* target_bl
 
         if (!is_red_color_block)
         {
-//            void *child_to_target_block = (get_left_subtree_block(target_block) != nullptr) ? get_left_subtree_block(
-//                    target_block) : get_right_subtree_block(target_block);
-
             void *child_to_target_block = nullptr;
 
             if (get_left_subtree_block(target_block) != nullptr)
@@ -779,8 +767,6 @@ void allocator_red_black_tree::dispose_block_from_red_black_tree(void* target_bl
             {
                 child_to_target_block = get_right_subtree_block(target_block);
             }
-
-//            bool color_child = reinterpret_cast<bool*>(reinterpret_cast<unsigned char*>(child_to_target_block) + sizeof(void*) + sizeof(void*) + sizeof(bool) + sizeof(size_t));
 
             bool* color_child_ptr = reinterpret_cast<bool*>(reinterpret_cast<unsigned char*>(child_to_target_block) + sizeof(void*) + sizeof(void*) + sizeof(bool) + sizeof(size_t));
             *color_child_ptr = 0;

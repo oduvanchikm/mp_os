@@ -1,11 +1,9 @@
 #include "gtest/gtest.h"
-
 #include <algorithm>
 #include <iostream>
 #include <list>
 #include <random>
 #include <vector>
-
 #include <b_tree.h>
 #include <client_logger_builder.h>
 #include <logger_builder.h>

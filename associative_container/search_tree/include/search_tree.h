@@ -1,11 +1,9 @@
 #ifndef MATH_PRACTICE_AND_OPERATING_SYSTEMS_SEARCH_TREE_H
 #define MATH_PRACTICE_AND_OPERATING_SYSTEMS_SEARCH_TREE_H
-
 #include <iostream>
 #include <functional>
 #include <stack>
 #include <vector>
-
 #include <allocator.h>
 #include <allocator_guardant.h>
 #include <associative_container.h>
@@ -13,9 +11,7 @@
 #include <logger_guardant.h>
 #include <not_implemented.h>
 
-template<
-        typename tkey,
-        typename tvalue>
+template<typename tkey, typename tvalue>
 class search_tree:
         public associative_container<tkey, tvalue>,
         protected allocator_guardant,
@@ -46,7 +42,7 @@ protected:
 
     };
 
-protected:
+public:
 
     std::function<int(tkey const &, tkey const &)> _keys_comparer;
     logger *_logger;
@@ -66,13 +62,13 @@ protected:
 
         auto *node = reinterpret_cast<typename search_tree<tkey, tvalue>::common_node *>(allocate_with_guard(
                 sizeof(typename search_tree<tkey, tvalue>::common_node), 1));
+
         allocator::construct(node, keys_and_values, subtrees, t);
 
         return node;
     }
 
-    void destroy_node(
-            common_node *to_destroy)
+    void destroy_node(common_node* to_destroy)
     {
         for (size_t i = 0; i < to_destroy->virtual_size; ++i)
         {
@@ -109,11 +105,8 @@ protected:
 
 protected:
 
-    template<
-            typename T>
-    inline void swap(
-            T &&one,
-            T &&another)
+    template<typename T>
+    inline void swap(T &&one, T &&another)
     {
         T temp = std::move(one);
         one = std::move(another);
